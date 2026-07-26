@@ -1,16 +1,23 @@
 {
-  "name": "game-engine",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "@fiction-wars/game-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@fiction-wars/shared-types": "workspace:*"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module"
+  "devDependencies": {
+    "@fiction-wars/config": "workspace:*",
+    "@types/node": "^22.20.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
 }

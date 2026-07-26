@@ -1,0 +1,13 @@
+{
+  "name": "@fiction-wars/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "node.json",
+    "eslint-base.js"
+  ]
+}

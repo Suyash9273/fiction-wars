@@ -10,5 +10,11 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@11.3.0",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "turbo": "^2.10.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0"
+  }
 }
