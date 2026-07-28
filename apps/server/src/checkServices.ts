@@ -8,7 +8,7 @@ async function checkMongo(): Promise<void> {
     dbName: env.MONGODB_DB_NAME,
     serverSelectionTimeoutMS: 8000,
   });
-  console.log(`✅ MongoDB connected (db: ${env.MONGODB_DB_NAME})`);
+  console.log(`MongoDB connected (db: ${env.MONGODB_DB_NAME})`);
   await mongoose.disconnect();
 }
 
@@ -24,7 +24,7 @@ async function checkRedis(): Promise<void> {
   try {
     const pong = await redis.ping();
     if (pong !== "PONG") throw new Error(`Unexpected PING response: ${pong}`);
-    console.log(`✅ Redis connected (key prefix: "${env.REDIS_KEY_PREFIX}")`);
+    console.log(`Redis connected (key prefix: "${env.REDIS_KEY_PREFIX}")`);
   } finally {
     redis.disconnect();
   }
@@ -37,7 +37,7 @@ async function main() {
   const failures = results.filter((r) => r.status === "rejected");
 
   if (failures.length > 0) {
-    console.error("\n❌ One or more service checks failed:\n");
+    console.error("\nOne or more service checks failed:\n");
     for (const f of failures) {
       if (f.status === "rejected") console.error(`  - ${f.reason}`);
     }
@@ -47,7 +47,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("\n✅ All cloud services reachable.\n");
+  console.log("\nAll cloud services reachable.\n");
   process.exit(0);
 }
 

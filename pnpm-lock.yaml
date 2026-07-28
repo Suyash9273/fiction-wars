@@ -271,6 +271,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fiction-wars/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       next:
         specifier: 16.2.10
         version: 16.2.10(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -281,6 +284,9 @@ importers:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
     devDependencies:
+      '@fiction-wars/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.3

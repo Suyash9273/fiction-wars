@@ -1,5 +1,13 @@
-// Placeholder entry point for Feature 1 (monorepo scaffold).
-// Feature 2 replaces this with the real domain models, Zod schemas, and the
-// socket event contract from the master brief (Sections 3-4).
+// Domain models, Zod schemas, and the socket event contract (Sections 3-4
+// of the master brief). Every later feature implements against these —
+// it doesn't redesign them.
 
-export const SHARED_TYPES_PACKAGE_READY = true as const;
+export * from "./card.js";
+export * from "./avatar.js";
+export * from "./player.js";
+export * from "./room.js";
+export * from "./game.js";
+export * from "./battleLog.js";
+export * from "./chat.js";
+export * from "./errors.js";
+export * from "./events.js";
