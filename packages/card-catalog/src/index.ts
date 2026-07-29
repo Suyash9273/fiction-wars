@@ -5,4 +5,5 @@
 // GUARDRAIL: nothing outside this package should import mongoose directly —
 // apps/server calls through this package's access layer only.
 
-export const CARD_CATALOG_PACKAGE_READY = true as const;
+export { connectCatalog, disconnectCatalog } from "./connection.js";
+export { getAllCards, getCardById, getCardsByUniverse, getCardCount } from "./accessLayer.js";

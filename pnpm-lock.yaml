@@ -317,6 +317,9 @@ importers:
       '@fiction-wars/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       mongoose:
         specifier: ^9.8.0
         version: 9.8.0
@@ -327,6 +330,9 @@ importers:
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
+      tsx:
+        specifier: ^4.23.1
+        version: 4.23.1
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
