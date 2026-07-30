@@ -225,6 +225,9 @@ importers:
       '@fiction-wars/card-catalog':
         specifier: workspace:*
         version: link:../../packages/card-catalog
+      '@fiction-wars/game-engine':
+        specifier: workspace:*
+        version: link:../../packages/game-engine
       '@fiction-wars/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
