@@ -14,7 +14,6 @@ import type {
   RoomCreateAck,
   RoomJoinAck,
   RoomReconnectAck,
-  ErrorCode,
 } from "@fiction-wars/shared-types";
 import {
   RoomCreatePayloadSchema,
@@ -36,7 +35,10 @@ import {
   lockRoom,
   getRoom,
 } from "./roomService.js";
-import { DISCONNECT_GRACE_PERIOD_MS } from "./constants.js";
+import { DISCONNECT_GRACE_PERIOD_MS } from "../constants.js";
+import { evictExistingSocket } from "../session/sessionManager.js";
+import { getEngineState, toBroadcastGameState } from "../game/gameService.js";
+import { armTurnTimer } from "../game/timerManager.js";
 
 type AppServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
@@ -175,7 +177,7 @@ export function registerRoomHandlers(
     if ("error" in result) {
       (ack as (r: RoomJoinAck | { ok: false; error: { code: string; message: string } }) => void)({
         ok: false,
-        error: { code: result.error as ErrorCode, message: result.error },
+        error: { code: result.error, message: result.error },
       });
       return;
     }
@@ -213,12 +215,17 @@ export function registerRoomHandlers(
     }
 
     const { roomCode, sessionToken } = parsed.data;
+
+    // Single-active-connection enforcement: evict any existing socket
+    // holding this seat before registering the incoming one (last-writer-wins).
+    await evictExistingSocket(io, roomCode, socket.id, socket.id);
+
     const result = await reconnectPlayer(redis, roomCode, sessionToken, socket.id);
 
     if ("error" in result) {
       (ack as (r: RoomReconnectAck | { ok: false; error: { code: string; message: string } }) => void)({
         ok: false,
-        error: { code: result.error as ErrorCode, message: result.error },
+        error: { code: result.error, message: result.error },
       });
       return;
     }
@@ -231,13 +238,38 @@ export function registerRoomHandlers(
     const roomView = toRoomView(room);
     const playerView = roomView.players.find((p) => p.id === player.id)!;
 
+    // Fetch live game state if a game is in progress
+    const engineState = room.state === "in-progress"
+      ? await getEngineState(redis, roomCode)
+      : null;
+
+    const gameState = engineState ? toBroadcastGameState(engineState) : undefined;
+
+    // Private view only if this player is still active (not eliminated)
+    const enginePlayer = engineState?.players.find((p) => p.id === player.id);
+    const topCard = enginePlayer?.pile[0];
+    const privateView = topCard ? { topCard } : undefined;
+
     (ack as (r: RoomReconnectAck) => void)({
       player: playerView,
       room: roomView,
-      // gameState and privateView will be added in Feature 7 (gameplay)
+      gameState,
+      privateView,
     });
 
-    io.to(roomCode).emit("room:update", roomView);
+    // Tell room this player is back online
+    io.to(roomCode).emit("room:update", toRoomView(room));
+
+    // Re-arm the turn timer if this player is the current picker and the
+    // timer was lost (server restart). armTurnTimer is a no-op if already set.
+    if (
+      engineState &&
+      engineState.status === "awaiting-pick" &&
+      engineState.currentPickerId === player.id
+    ) {
+      const { makeFinalizeRound } = await import("../game/gameHandlers.js");
+      armTurnTimer(roomCode, engineState, makeFinalizeRound(io, redis));
+    }
   });
 
   // room:leave
@@ -270,7 +302,7 @@ export function registerRoomHandlers(
     if ("error" in result) {
       (ack as (r: BasicAck) => void)({
         ok: false,
-        error: { code: result.error as ErrorCode, message: result.error },
+        error: { code: result.error, message: result.error },
       });
       return;
     }
@@ -316,7 +348,7 @@ export function registerRoomHandlers(
     if ("error" in result) {
       (ack as (r: BasicAck) => void)({
         ok: false,
-        error: { code: result.error as ErrorCode, message: result.error },
+        error: { code: result.error, message: result.error },
       });
       return;
     }

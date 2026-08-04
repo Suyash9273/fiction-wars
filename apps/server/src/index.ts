@@ -11,9 +11,9 @@ import type {
 } from "@fiction-wars/shared-types";
 import { connectCatalog } from "@fiction-wars/card-catalog";
 import { getRedisClient, closeRedisClient } from "./redis.js";
-import { registerRoomHandlers } from "./roomHandlers.js";
-import { registerGameHandlers } from "./gameHandlers.js";
-import { clearAllTimers } from "./timerManager.js";
+import { registerRoomHandlers } from "./room/roomHandlers.js";
+import { registerGameHandlers } from "./game/gameHandlers.js";
+import { clearAllTimers } from "./game/timerManager.js";
 
 const app = express();
 app.use(cors({ origin: env.CLIENT_ORIGIN }));

@@ -13,7 +13,7 @@ import {
   ROOM_TTL_SECONDS,
   ENDED_ROOM_TTL_SECONDS,
   DISCONNECT_GRACE_PERIOD_MS,
-} from "./constants.js";
+} from "../constants.js";
 import { reserveRoomCode } from "./roomCode.js";
 
 //Read / Write helpers :-> 

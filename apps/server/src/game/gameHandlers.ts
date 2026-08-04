@@ -8,8 +8,7 @@ import type {
   BasicAck,
   CardStatKey,
   GameEndedSummary,
-} from "@fiction-wars/shared-types";
-import {
+} from "@fiction-wars/shared-types";import {
   GamePickStatPayloadSchema,
 } from "@fiction-wars/shared-types";
 import {
@@ -20,7 +19,7 @@ import {
   type EngineState,
 } from "@fiction-wars/game-engine";
 import { getAllCards } from "@fiction-wars/card-catalog";
-import { getRoom, saveRoom } from "./roomService.js";
+import { getRoom, saveRoom } from "../room/roomService.js";
 import {
   saveEngineState,
   getEngineState,
@@ -34,7 +33,7 @@ import {
   clearTurnTimer,
   computeTurnDeadline,
 } from "./timerManager.js";
-import { lockRoom } from "./roomHandlers.js";
+import { lockRoom } from "../room/roomHandlers.js";
 import { checkRoundCapWinner } from "./roundCapHelper.js";
 
 type AppServer = Server<
@@ -328,3 +327,18 @@ export function registerGameHandlers(
 // Export for use in roomHandlers reconnect path (Feature 8)
 export { emitPrivateViews, toBroadcastGameState };
 export { deleteEngineState, deleteCatalogSnapshot };
+
+/**
+ * Returns a finalizeRound callback bound to the given io + redis instances.
+ * Used by roomHandlers to re-arm the turn timer after a server restart
+ * without creating a circular import (gameHandlers imports roomHandlers;
+ * roomHandlers dynamically imports this factory instead).
+ */
+export function makeFinalizeRound(
+  io: AppServer,
+  redis: Redis
+): (roomCode: string, stat: CardStatKey, wasAutoPicked: true) => Promise<void> {
+  return async (roomCode, stat, wasAutoPicked) => {
+    await finalizeRound(io, redis, roomCode, stat, wasAutoPicked);
+  };
+}

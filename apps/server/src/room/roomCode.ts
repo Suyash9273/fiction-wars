@@ -1,5 +1,5 @@
 import type { Redis } from "ioredis"
-import { roomKey, ROOM_TTL_SECONDS } from "./constants.js"
+import { roomKey, ROOM_TTL_SECONDS } from "../constants.js"
 
 // Charset deliberately excludes visually-ambiguous characters
 // 0/O, 1/l/L - since players type these codes on their own
