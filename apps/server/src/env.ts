@@ -16,7 +16,7 @@ import {z} from "zod"
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  PORT: z.coerce.number().int().positive().default(4000),
+  PORT: z.coerce.number().int().positive().default(5000),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required (MongoDB Atlas connection string)"),
   MONGODB_DB_NAME: z.string().min(1).default("fiction_wars_dev"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required (Redis Cloud/Upstash connection string)"),
