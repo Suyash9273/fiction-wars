@@ -11,12 +11,15 @@ export const ERROR_CODES = [
   "SESSION_EXPIRED",
   "RATE_LIMITED",
   "VALIDATION_ERROR",
+  "PLAYER_NOT_FOUND",
+  "GAME_NOT_STARTED",
+  "INSUFFICIENT_PLAYERS",
 ] as const;
 export const ErrorCodeSchema = z.enum(ERROR_CODES);
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 
 export const ActionFailedPayloadSchema = z.object({
-    code: ErrorCodeSchema,
-    message: z.string().min(1),
-})
+  code: ErrorCodeSchema,
+  message: z.string().min(1),
+});
 export type ActionFailedPayload = z.infer<typeof ActionFailedPayloadSchema>;
