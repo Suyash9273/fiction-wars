@@ -10,9 +10,10 @@ import type {
   SocketData,
 } from "@fiction-wars/shared-types";
 import { connectCatalog } from "@fiction-wars/card-catalog";
-import { getRedisClient, closeRedisClient } from "./redis.js";
+import { getRedisClient, closeRedisClient } from "./config/redis.js";
 import { registerRoomHandlers } from "./room/roomHandlers.js";
 import { registerGameHandlers } from "./game/gameHandlers.js";
+import { registerChatHandlers } from "./chat/chatHandlers.js";
 import { clearAllTimers } from "./game/timerManager.js";
 
 const app = express();
@@ -40,6 +41,7 @@ io.on("connection", (socket) => {
   console.log(`[Socket] Connected: ${socket.id}`);
   registerRoomHandlers(io, socket, redis);
   registerGameHandlers(io, socket, redis);
+  registerChatHandlers(io, socket, redis);
 
   socket.on("disconnect", (reason) => {
     console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
@@ -74,4 +76,3 @@ start().catch((err) => {
   console.error("[Server] Failed to start:", err);
   process.exit(1);
 });
-

@@ -39,6 +39,7 @@ import { DISCONNECT_GRACE_PERIOD_MS } from "../constants.js";
 import { evictExistingSocket } from "../session/sessionManager.js";
 import { getEngineState, toBroadcastGameState } from "../game/gameService.js";
 import { armTurnTimer } from "../game/timerManager.js";
+import { getChatMessages } from "../chat/chatHandlers.js";
 
 type AppServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
@@ -250,11 +251,15 @@ export function registerRoomHandlers(
     const topCard = enginePlayer?.pile[0];
     const privateView = topCard ? { topCard } : undefined;
 
+    // Send recent chat history so reconnecting player doesn't miss messages
+    const chatHistory = await getChatMessages(redis, roomCode);
+
     (ack as (r: RoomReconnectAck) => void)({
       player: playerView,
       room: roomView,
       gameState,
       privateView,
+      chatHistory,
     });
 
     // Tell room this player is back online

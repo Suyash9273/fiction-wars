@@ -87,6 +87,7 @@ export const RoomReconnectAckSchema = z.object({
   room: RoomViewSchema,
   gameState: GameStateSchema.optional(),
   privateView: PrivatePlayerViewSchema.optional(),
+  chatHistory: z.array(ChatMessageSchema).optional(),
 });
 export type RoomReconnectAck = z.infer<typeof RoomReconnectAckSchema>;
 

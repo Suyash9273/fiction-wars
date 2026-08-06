@@ -16,6 +16,8 @@ import {
 } from "@fiction-wars/shared-types";
 import {
   roomKey,
+  chatKey,
+  gameKey,
   ROOM_TTL_SECONDS,
   ENDED_ROOM_TTL_SECONDS,
   DISCONNECT_GRACE_PERIOD_MS,
@@ -45,7 +47,9 @@ export async function saveRoom(redis: Redis, room: Room): Promise<void> {
 }
 
 export async function deleteRoom(redis: Redis, code: string): Promise<void> {
-  await redis.del(roomKey(code));
+  // Delete all keys associated with this room atomically.
+  // If any key doesn't exist, DEL silently ignores it — no error.
+  await redis.del(roomKey(code), chatKey(code), gameKey(code));
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────
@@ -333,3 +337,4 @@ export async function lockRoom(
 }
 
 export { toRoomView };
+

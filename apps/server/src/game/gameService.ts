@@ -1,12 +1,12 @@
 import type { Redis } from "ioredis";
 import type { Card, GameState } from "@fiction-wars/shared-types";
 import type { EngineState } from "@fiction-wars/game-engine";
-import { ROOM_TTL_SECONDS, ENDED_ROOM_TTL_SECONDS } from "../constants.js";
-
-// Separate Redis key for server-side game state — keeps deckAssignment
-// (the hidden pile contents) off the room key that feeds client broadcasts.
-const gameKey = (code: string) => `game:${code}`;
-const catalogKey = (code: string) => `catalog:${code}`;
+import {
+  ROOM_TTL_SECONDS,
+  ENDED_ROOM_TTL_SECONDS,
+  gameKey,
+  catalogKey,
+} from "../constants.js";
 
 // ─── Persist / retrieve ───────────────────────────────────────────────────
 
