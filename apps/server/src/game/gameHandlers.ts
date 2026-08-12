@@ -98,6 +98,24 @@ async function finalizeRound(
   }
 
   let updatedState = result.value.updatedState;
+
+  // Enrich reveals with username from room state — the engine is pure and
+  // doesn't have access to room player names, so we fill them in here
+  // before the battle log entry is broadcast or stored.
+  const lastEntry = updatedState.battleLog[updatedState.battleLog.length - 1];
+  if (lastEntry) {
+    const enrichedReveals = lastEntry.reveals.map((r) => ({
+      ...r,
+      username: room.players.find((p) => p.id === r.playerId)?.username ?? r.playerId,
+    }));
+    updatedState = {
+      ...updatedState,
+      battleLog: [
+        ...updatedState.battleLog.slice(0, -1),
+        { ...lastEntry, reveals: enrichedReveals },
+      ],
+    };
+  }
   const { battleLogEntry } = {
     battleLogEntry: updatedState.battleLog[updatedState.battleLog.length - 1]!,
   };

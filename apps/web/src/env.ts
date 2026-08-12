@@ -1,7 +1,7 @@
 import {z} from "zod";
 
 const envSchema = z.object({
-    NEXT_PUBLIC_SERVER_URL: z.string().url().default("http://localhost:4000")
+    NEXT_PUBLIC_SERVER_URL: z.string().url().default("http://localhost:5000")
 })
 
 const parsed = envSchema.safeParse({

@@ -23,11 +23,22 @@ export function useGameSocketEvents(): void {
     const socket = getSocket();
 
     socket.on("game:started", ({ pileCounts, firstPickerId }) => {
-      // Update pile counts in game state — we don't have a full GameState yet,
-      // so wait for game:turnStarted which carries turnDeadline too.
-      // For now just log; the store will be set by game:turnStarted below.
-      void pileCounts;
-      void firstPickerId;
+      // Initialize GameState from the started event — turnDeadline and
+      // currentPickerId are confirmed/overwritten by game:turnStarted
+      // which arrives immediately after from the server.
+      useGameStore.setState({
+        gameState: {
+          roomCode: "",         // filled in on first game:turnStarted
+          currentPickerId: firstPickerId,
+          roundNumber: 1,
+          pot: [],
+          status: "awaiting-pick",
+          turnDeadline: Date.now() + 30_000, // placeholder — overwritten by turnStarted
+          pileCounts,
+        },
+        battleLog: [],
+        summary: null,
+      });
     });
 
     socket.on("game:turnStarted", ({ pickerId, turnDeadline }) => {
@@ -37,9 +48,17 @@ export function useGameSocketEvents(): void {
               ...state.gameState,
               currentPickerId: pickerId,
               turnDeadline,
-              status: "awaiting-pick",
+              status: "awaiting-pick" as const,
             }
-          : null,
+          : {
+              roomCode: "",
+              currentPickerId: pickerId,
+              roundNumber: 1,
+              pot: [],
+              status: "awaiting-pick" as const,
+              turnDeadline,
+              pileCounts: {},
+            },
       }));
     });
 
@@ -67,7 +86,7 @@ export function useGameSocketEvents(): void {
     });
 
     socket.on("game:ended", ({ winnerId, summary }) => {
-      setSummary(winnerId, summary);
+      setSummary(summary);
       useGameStore.setState((state) => ({
         gameState: state.gameState
           ? { ...state.gameState, status: "game-over", winnerId }

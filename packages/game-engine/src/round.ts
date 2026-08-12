@@ -110,7 +110,10 @@ export function resolveRound(
     wasAutoPicked,
     reveals: reveals.map((r) => ({
       playerId: r.playerId,
+      username: "",       // enriched by server in gameHandlers before broadcast
       cardId: r.cardId,
+      cardName: r.card.name,       // card is available here in the engine
+      accentColor: r.card.accentColor,
       statValue: r.statValue,
     })),
     winnerId: roundWinnerId,

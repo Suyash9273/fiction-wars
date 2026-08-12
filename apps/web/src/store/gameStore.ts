@@ -17,7 +17,7 @@ interface GameStoreState {
     setGameState: (state: GameState) => void;
     setMyTopCard: (card: Card) => void;
     appendBattleLogEntry: (entry: BattleLogEntry) => void;
-    setSummary: (winnerId: string, summary: GameEndedSummary) => void;
+    setSummary: (summary: GameEndedSummary) => void;
     clearGame: () => void;
 }
 
@@ -34,7 +34,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
   appendBattleLogEntry: (entry) =>
     set((state) => ({ battleLog: [...state.battleLog, entry] })),
 
-  setSummary: (_winnerId, summary) => set({ summary }),
+  setSummary: (summary) => set({ summary }),
 
   clearGame: () =>
     set({ gameState: null, myTopCard: null, battleLog: [], summary: null }),

@@ -1,9 +1,12 @@
-import {z} from "zod"
+import { z } from "zod";
 import { CardStatKeySchema } from "./card.js";
 
 export const RevealSchema = z.object({
   playerId: z.string().min(1),
+  username: z.string().min(1),   // included so the UI never needs a player lookup
   cardId: z.string().min(1),
+  cardName: z.string().min(1),   // included so the UI can display the card without a catalog fetch
+  accentColor: z.string().min(1),
   statValue: z.number(),
 });
 export type Reveal = z.infer<typeof RevealSchema>;
