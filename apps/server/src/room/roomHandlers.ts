@@ -58,8 +58,10 @@ async function handlePlayerLeave(
   if (!playerId || !roomCode) return;
 
   if (reason === "disconnect") {
-    // Mark disconnected and start grace period — don't remove yet
-    const room = await markPlayerDisconnected(redis, roomCode, playerId);
+    // Mark disconnected and start grace period — don't remove yet.
+    // Pass socket.id so markPlayerDisconnected can detect if the player
+    // already reconnected with a new socket before this disconnect fired.
+    const room = await markPlayerDisconnected(redis, roomCode, playerId, socket.id);
     if (!room) return;
 
     // Broadcast connection status change so other clients can show it
@@ -158,6 +160,7 @@ export function registerRoomHandlers(
       roomCode: room.code,
       playerId,
       sessionToken,
+      room: toRoomView(room),
     });
   });
 
@@ -217,10 +220,9 @@ export function registerRoomHandlers(
 
     const { roomCode, sessionToken } = parsed.data;
 
-    // Single-active-connection enforcement: evict any existing socket
-    // holding this seat before registering the incoming one (last-writer-wins).
-    await evictExistingSocket(io, roomCode, socket.id, socket.id);
-
+    // Resolve the player from the session token first so we know their
+    // stable playerId. We need this before eviction — the evict function
+    // matches by s.data.playerId, not by socket.id.
     const result = await reconnectPlayer(redis, roomCode, sessionToken, socket.id);
 
     if ("error" in result) {
@@ -232,6 +234,13 @@ export function registerRoomHandlers(
     }
 
     const { room, player } = result;
+
+    // Now that we have the real playerId, evict any existing socket for this
+    // seat (last-writer-wins). This prevents two tabs from holding the same
+    // seat simultaneously. Must happen AFTER reconnectPlayer so we can pass
+    // player.id (the stable UUID) rather than socket.id (which is not a playerId).
+    await evictExistingSocket(io, roomCode, player.id, socket.id);
+
     socket.data.playerId = player.id;
     socket.data.roomCode = roomCode;
     await socket.join(roomCode);
@@ -265,13 +274,11 @@ export function registerRoomHandlers(
     // Tell room this player is back online
     io.to(roomCode).emit("room:update", toRoomView(room));
 
-    // Re-arm the turn timer if this player is the current picker and the
-    // timer was lost (server restart). armTurnTimer is a no-op if already set.
-    if (
-      engineState &&
-      engineState.status === "awaiting-pick" &&
-      engineState.currentPickerId === player.id
-    ) {
+    // Re-arm the turn timer on any reconnect when the game is awaiting a pick.
+    // The timer lives only in process memory and is lost on server restart.
+    // armTurnTimer is a no-op if a timer is already running for this room,
+    // so it is safe to call for every reconnecting player — not just the picker.
+    if (engineState && engineState.status === "awaiting-pick") {
       const { makeFinalizeRound } = await import("../game/gameHandlers.js");
       armTurnTimer(roomCode, engineState, makeFinalizeRound(io, redis));
     }
@@ -363,7 +370,10 @@ export function registerRoomHandlers(
   });
 
   // socket disconnect — triggers grace-period logic
-  socket.on("disconnect", async () => {
+  // This is the single authoritative disconnect handler for the socket.
+  // index.ts must NOT register a second one (would double-fire leave logic).
+  socket.on("disconnect", async (reason) => {
+    console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
     await handlePlayerLeave(io, redis, socket, "disconnect");
   });
 }

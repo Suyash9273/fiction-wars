@@ -63,6 +63,19 @@ export function CreateRoomForm() {
     const ack = res as import("@fiction-wars/shared-types").RoomCreateAck;
     setIdentity(ack.playerId, ack.sessionToken);
     persistSession(ack.roomCode, ack.sessionToken);
+
+    // Fetch the full room state via reconnect before navigating.
+    // room:create returns no room object in its ack, so without this the
+    // room store stays null and the room page renders the JoinRoomForm
+    // (isJoining = !playerId || !room), forcing a manual reload.
+    const reconnectRes = await import("@/socket/socketEvents").then((m) =>
+      m.emitReconnect({ roomCode: ack.roomCode, sessionToken: ack.sessionToken })
+    );
+    if (!("ok" in reconnectRes)) {
+      const reconnectAck = reconnectRes as import("@fiction-wars/shared-types").RoomReconnectAck;
+      setRoom(reconnectAck.room);
+    }
+
     router.push(`/room/${ack.roomCode}`);
   }
 

@@ -20,9 +20,16 @@ export const useChatStore = create<ChatState>((set) => ({
     setMessages: (messages) => set({messages}),
 
     addMessage: (message) => 
-        set((state) => ({
-            messages: [...state.messages, message]
-        })),
+        set((state) => {
+            const updated = [...state.messages, message];
+            // Enforce the client-side cap: drop oldest messages when we exceed
+            // MAX_CLIENT_MESSAGES so the array never grows without bound.
+            return {
+                messages: updated.length > MAX_CLIENT_MESSAGES
+                    ? updated.slice(updated.length - MAX_CLIENT_MESSAGES)
+                    : updated,
+            };
+        }),
     
     updateReactions: (messageId, reactions) => 
         set((state) => ({

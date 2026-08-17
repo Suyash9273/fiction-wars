@@ -72,6 +72,7 @@ export const RoomCreateAckSchema = z.object({
   roomCode: RoomCodeSchema,
   playerId: z.string().min(1),
   sessionToken: z.string().min(1),
+  room: RoomViewSchema,
 });
 export type RoomCreateAck = z.infer<typeof RoomCreateAckSchema>;
 

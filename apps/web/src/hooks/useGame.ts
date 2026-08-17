@@ -8,36 +8,31 @@ import { useRoomStore } from "../store/roomStore";
 /**
  * Subscribes to all game:* and player:* socket events, writes to game store.
  * Mount once at the room page level alongside useRoomSocketEvents.
+ *
+ * IMPORTANT: the dependency array is intentionally empty []. Zustand setters
+ * are stable references — they never change between renders, so including them
+ * would cause the effect to re-run and re-register listeners unnecessarily.
+ * playerId is read from the store inside handlers, not captured in closure.
  */
 export function useGameSocketEvents(): void {
-  const {
-    setGameState,
-    setMyTopCard,
-    appendBattleLogEntry,
-    setSummary,
-  } = useGameStore();
-
-  const { playerId } = useRoomStore();
-
   useEffect(() => {
     const socket = getSocket();
 
     socket.on("game:started", ({ pileCounts, firstPickerId }) => {
-      // Initialize GameState from the started event — turnDeadline and
-      // currentPickerId are confirmed/overwritten by game:turnStarted
-      // which arrives immediately after from the server.
+      const roomCode = useRoomStore.getState().room?.code ?? "";
       useGameStore.setState({
         gameState: {
-          roomCode: "",         // filled in on first game:turnStarted
+          roomCode,
           currentPickerId: firstPickerId,
           roundNumber: 1,
           pot: [],
           status: "awaiting-pick",
-          turnDeadline: Date.now() + 30_000, // placeholder — overwritten by turnStarted
+          turnDeadline: Date.now() + 30_000, // placeholder — overwritten by game:turnStarted
           pileCounts,
         },
         battleLog: [],
         summary: null,
+        myTopCard: null, // clear stale card from any previous game
       });
     });
 
@@ -51,7 +46,7 @@ export function useGameSocketEvents(): void {
               status: "awaiting-pick" as const,
             }
           : {
-              roomCode: "",
+              roomCode: useRoomStore.getState().room?.code ?? "",
               currentPickerId: pickerId,
               roundNumber: 1,
               pot: [],
@@ -63,22 +58,26 @@ export function useGameSocketEvents(): void {
     });
 
     socket.on("game:roundResolved", ({ battleLogEntry, pileCounts }) => {
-      appendBattleLogEntry(battleLogEntry);
       useGameStore.setState((state) => ({
+        battleLog: [...state.battleLog, battleLogEntry],
         gameState: state.gameState
-          ? { ...state.gameState, pileCounts, status: "resolving" }
+          ? {
+              ...state.gameState,
+              pileCounts,
+              roundNumber: state.gameState.roundNumber + 1,
+              status: "resolving" as const,
+            }
           : null,
       }));
     });
 
     socket.on("game:playerEliminated", ({ playerId: eliminatedId }) => {
-      // Mark in room store — player stays in room as spectator
       useRoomStore.setState((state) => ({
         room: state.room
           ? {
               ...state.room,
               players: state.room.players.map((p) =>
-                p.id === eliminatedId ? { ...p, status: "eliminated" } : p
+                p.id === eliminatedId ? { ...p, status: "eliminated" as const } : p
               ),
             }
           : null,
@@ -86,17 +85,17 @@ export function useGameSocketEvents(): void {
     });
 
     socket.on("game:ended", ({ winnerId, summary }) => {
-      setSummary(summary);
       useGameStore.setState((state) => ({
+        summary,
         gameState: state.gameState
-          ? { ...state.gameState, status: "game-over", winnerId }
+          ? { ...state.gameState, status: "game-over" as const, winnerId }
           : null,
       }));
     });
 
     // Private — only sent to this player's socket
     socket.on("player:privateView", ({ topCard }) => {
-      setMyTopCard(topCard);
+      useGameStore.getState().setMyTopCard(topCard);
     });
 
     return () => {
@@ -107,5 +106,5 @@ export function useGameSocketEvents(): void {
       socket.off("game:ended");
       socket.off("player:privateView");
     };
-  }, [appendBattleLogEntry, setGameState, setMyTopCard, setSummary, playerId]);
+  }, []); // intentionally empty — see comment above
 }

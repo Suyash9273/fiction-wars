@@ -42,10 +42,10 @@ io.on("connection", (socket) => {
   registerRoomHandlers(io, socket, redis);
   registerGameHandlers(io, socket, redis);
   registerChatHandlers(io, socket, redis);
-
-  socket.on("disconnect", (reason) => {
-    console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
-  });
+  // roomHandlers registers the authoritative "disconnect" handler that runs
+  // the grace-period / leave logic. Do not add a second handler here — Socket.io
+  // calls ALL registered "disconnect" listeners and a duplicate causes the
+  // leave path to run twice, corrupting grace-period timing.
 });
 
 async function start(): Promise<void> {

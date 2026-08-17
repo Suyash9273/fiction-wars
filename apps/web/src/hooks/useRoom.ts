@@ -75,9 +75,20 @@ export function useSessionPersistence(roomCode: string): void {
     const storedToken = localStorage.getItem(`fw:session:${roomCode}`);
     if (!storedToken) return;
 
-    connectSocket();
-
+    // Register a one-time room:update listener BEFORE connecting and emitting
+    // the reconnect event. The server broadcasts room:update to the room
+    // immediately after processing room:reconnect — this broadcast can arrive
+    // before the ack resolves and before useRoomSocketEvents (a separate
+    // useEffect) has had a chance to register its own room:update listener.
+    // Catching it here ensures the store is populated regardless of timing.
     const socket = getSocket();
+
+    const handleEarlyRoomUpdate = (room: import("@fiction-wars/shared-types").RoomView) => {
+      setRoom(room);
+    };
+    socket.once("room:update", handleEarlyRoomUpdate);
+
+    connectSocket();
 
     socket.emit(
       "room:reconnect",
@@ -87,7 +98,9 @@ export function useSessionPersistence(roomCode: string): void {
         // { player, room, ... } with no ok field. Going through unknown
         // because TS won't directly widen between two non-overlapping unions.
         if ("ok" in res) {
-          // Got the failure shape — session expired or room gone
+          // Got the failure shape — session expired or room gone.
+          // Remove the early listener so it doesn't fire on a later event.
+          socket.off("room:update", handleEarlyRoomUpdate);
           localStorage.removeItem(`fw:session:${roomCode}`);
           return;
         }
@@ -99,6 +112,11 @@ export function useSessionPersistence(roomCode: string): void {
         if (ack.chatHistory) setMessages(ack.chatHistory);
       }
     );
+
+    return () => {
+      // Clean up the early listener if the component unmounts before the ack
+      socket.off("room:update", handleEarlyRoomUpdate);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode]);
 }

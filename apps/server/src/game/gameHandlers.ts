@@ -8,8 +8,10 @@ import type {
   BasicAck,
   CardStatKey,
   GameEndedSummary,
+  Room,
 } from "@fiction-wars/shared-types";import {
   GamePickStatPayloadSchema,
+  toRoomView,
 } from "@fiction-wars/shared-types";
 import {
   buildDeck,
@@ -167,6 +169,18 @@ async function finalizeRound(
     return;
   }
 
+  // Sync pileCount on each Room player from the live engine state so that
+  // any subsequent room:update broadcast (e.g. on reconnect) shows current
+  // values instead of the stale 0 set at join time.
+  const roomWithPiles: Room = {
+    ...room,
+    players: room.players.map((p) => {
+      const enginePlayer = updatedState.players.find((ep) => ep.id === p.id);
+      return enginePlayer ? { ...p, pileCount: enginePlayer.pile.length } : p;
+    }),
+  };
+  await saveRoom(redis, roomWithPiles);
+
   // Game continues — persist, emit new turn, arm timer, send private views
   await saveEngineState(redis, roomCode, updatedState);
 
@@ -262,16 +276,32 @@ export function registerGameHandlers(
       battleLog: [],
     };
 
+    // Sync pileCount on each Room player to reflect the initial deck deal.
+    // Players start with pileCount=0 (set at join); update to actual pile size.
+    const roomWithInitialPiles: Room = {
+      ...room,
+      players: room.players.map((p) => {
+        const enginePlayer = engineState.players.find((ep) => ep.id === p.id);
+        return enginePlayer ? { ...p, pileCount: enginePlayer.pile.length } : p;
+      }),
+    };
+
     // Persist both the catalog snapshot and the engine state
     await Promise.all([
       saveCatalogSnapshot(redis, roomCode, catalog),
       saveEngineState(redis, roomCode, engineState),
-      saveRoom(redis, room),
+      saveRoom(redis, roomWithInitialPiles),
     ]);
 
     const pileCounts = Object.fromEntries(
       engineState.players.map((p) => [p.id, p.pile.length])
     );
+
+    // Broadcast room state change (lobby -> in-progress) so all clients
+    // update room.state and render GameView instead of the lobby.
+    // This MUST be emitted before game:started so the client-side conditional
+    // (room.state === "in-progress") is already true when game:started arrives.
+    io.to(roomCode).emit("room:update", toRoomView(roomWithInitialPiles));
 
     // Broadcast game started — pile counts only, no card data
     io.to(roomCode).emit("game:started", { pileCounts, firstPickerId });

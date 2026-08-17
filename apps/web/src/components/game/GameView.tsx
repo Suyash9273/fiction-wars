@@ -26,8 +26,15 @@ export function GameView({ turnTimerSeconds }: Props) {
   const lastEntry = battleLog[battleLog.length - 1];
 
   // Post-game summary
-  if (isGameOver && summary) {
-    return <PostGameSummary />;
+  if (isGameOver) {
+    if (summary) return <PostGameSummary />;
+    // game:ended received but summary not yet processed — show a brief wait
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16">
+        <p className="text-lg font-semibold">Game over!</p>
+        <p className="text-sm text-muted-foreground">Loading results…</p>
+      </div>
+    );
   }
 
   return (
@@ -54,7 +61,7 @@ export function GameView({ turnTimerSeconds }: Props) {
       {/* Stat picker — only shown to the active picker, not eliminated players */}
       {isMyTurn && !isEliminated && myTopCard && (
         <section className="flex flex-col gap-2">
-          <StatPicker myStats={myTopCard.stats} />
+          <StatPicker key={gameState.roundNumber} myStats={myTopCard.stats} />
         </section>
       )}
 

@@ -157,6 +157,10 @@ export async function reconnectPlayer(
   const player = room.players.find((p) => p.sessionToken === sessionToken);
   if (!player) return { error: "SESSION_EXPIRED" };
 
+  // Only enforce the grace-period expiry for players who actually disconnected.
+  // Players with disconnectedAt === null are still considered "active" (their
+  // old socket may still be open) — evictExistingSocket in roomHandlers will
+  // close it. We allow the reconnect so the new socket can take the seat.
   if (player.disconnectedAt !== null) {
     const elapsed = Date.now() - player.disconnectedAt;
     if (elapsed > DISCONNECT_GRACE_PERIOD_MS) {
@@ -228,10 +232,22 @@ export async function removePlayerFromRoom(
 export async function markPlayerDisconnected(
   redis: Redis,
   code: string,
-  playerId: string
+  playerId: string,
+  disconnectingSocketId: string
 ): Promise<Room | null> {
   const room = await getRoom(redis, code);
   if (!room) return null;
+
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) return null;
+
+  // Only mark as disconnected if the disconnecting socket is still the
+  // player's current socket. If the player already reconnected with a new
+  // socket (race: reconnect arrives before disconnect fires), the old
+  // socket's disconnect event must be a no-op — otherwise we'd overwrite
+  // the new socketId with null and the grace-period timer would evict
+  // a player who is already back online.
+  if (player.socketId !== disconnectingSocketId) return null;
 
   const updatedRoom: Room = {
     ...room,

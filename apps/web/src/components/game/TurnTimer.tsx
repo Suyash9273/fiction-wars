@@ -10,19 +10,20 @@ interface Props {
 }
 
 export function TurnTimer({ totalSeconds }: Props) {
-  const { gameState } = useGameStore();
   const { playerId } = useRoomStore();
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
 
-  const isMyTurn = gameState?.currentPickerId === playerId;
+  const turnDeadline = useGameStore((s) => s.gameState?.turnDeadline);
+  const status = useGameStore((s) => s.gameState?.status);
+  const isMyTurn = useGameStore((s) => s.gameState?.currentPickerId) === playerId;
 
   useEffect(() => {
-    if (!gameState || gameState.status !== "awaiting-pick") return;
+    if (status !== "awaiting-pick" || !turnDeadline) return;
 
     const tick = () => {
       const remaining = Math.max(
         0,
-        Math.ceil((gameState.turnDeadline - Date.now()) / 1000)
+        Math.ceil((turnDeadline - Date.now()) / 1000)
       );
       setSecondsLeft(remaining);
     };
@@ -30,9 +31,9 @@ export function TurnTimer({ totalSeconds }: Props) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [gameState]);
+  }, [turnDeadline, status]); // only restart when deadline or status changes, not every render
 
-  if (!gameState || gameState.status !== "awaiting-pick") return null;
+  if (status !== "awaiting-pick") return null;
 
   const pct = Math.round((secondsLeft / totalSeconds) * 100);
   const urgent = secondsLeft <= 5;
@@ -60,3 +61,4 @@ export function TurnTimer({ totalSeconds }: Props) {
     </div>
   );
 }
+
