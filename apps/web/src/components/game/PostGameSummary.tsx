@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useGameStore } from "@/store/gameStore";
 import { useRoomStore } from "@/store/roomStore";
+import { BattleLog } from "./BattleLog";
 import { emitLeaveRoom } from "@/socket/socketEvents";
 import { clearSession } from "@/hooks/useRoom";
 import type { CardStatKey } from "@fiction-wars/shared-types";
@@ -17,7 +18,7 @@ const STAT_LABELS: Record<CardStatKey, string> = {
 
 export function PostGameSummary() {
   const router = useRouter();
-  const { gameState, summary } = useGameStore();
+  const { gameState, summary, battleLog } = useGameStore();
   const { room, playerId } = useRoomStore();
 
   if (!summary || !gameState?.winnerId || !room) return null;
@@ -107,6 +108,20 @@ export function PostGameSummary() {
           </p>
         )}
       </div>
+
+      {/* Full battle log */}
+      {battleLog.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+            Full Battle Log ({battleLog.length} rounds)
+          </h3>
+          <div className="max-h-48 overflow-y-auto rounded-lg border">
+            <div className="p-2">
+              <BattleLog entries={battleLog} myPlayerId={playerId} showAll />
+            </div>
+          </div>
+        </div>
+      )}
 
       <Button onClick={handleLeave} className="w-full">
         Leave Room

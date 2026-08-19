@@ -15,7 +15,8 @@ export function TurnTimer({ totalSeconds }: Props) {
 
   const turnDeadline = useGameStore((s) => s.gameState?.turnDeadline);
   const status = useGameStore((s) => s.gameState?.status);
-  const isMyTurn = useGameStore((s) => s.gameState?.currentPickerId) === playerId;
+  const currentPickerId = useGameStore((s) => s.gameState?.currentPickerId);
+  const isMyTurn = currentPickerId === playerId;
 
   useEffect(() => {
     if (status !== "awaiting-pick" || !turnDeadline) return;
@@ -31,7 +32,7 @@ export function TurnTimer({ totalSeconds }: Props) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [turnDeadline, status]); // only restart when deadline or status changes, not every render
+  }, [turnDeadline, status]);
 
   if (status !== "awaiting-pick") return null;
 
@@ -48,7 +49,6 @@ export function TurnTimer({ totalSeconds }: Props) {
           {secondsLeft}s
         </span>
       </div>
-      {/* Inline progress bar — swap for shadcn Progress once CLI adds it */}
       <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
         <div
           className={cn(
@@ -61,4 +61,3 @@ export function TurnTimer({ totalSeconds }: Props) {
     </div>
   );
 }
-

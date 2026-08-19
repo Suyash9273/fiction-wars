@@ -5,15 +5,6 @@ import { getSocket } from "../socket/socketClient";
 import { useGameStore } from "../store/gameStore";
 import { useRoomStore } from "../store/roomStore";
 
-/**
- * Subscribes to all game:* and player:* socket events, writes to game store.
- * Mount once at the room page level alongside useRoomSocketEvents.
- *
- * IMPORTANT: the dependency array is intentionally empty []. Zustand setters
- * are stable references — they never change between renders, so including them
- * would cause the effect to re-run and re-register listeners unnecessarily.
- * playerId is read from the store inside handlers, not captured in closure.
- */
 export function useGameSocketEvents(): void {
   useEffect(() => {
     const socket = getSocket();
@@ -27,12 +18,12 @@ export function useGameSocketEvents(): void {
           roundNumber: 1,
           pot: [],
           status: "awaiting-pick",
-          turnDeadline: Date.now() + 30_000, // placeholder — overwritten by game:turnStarted
+          turnDeadline: Date.now() + 30_000,
           pileCounts,
         },
         battleLog: [],
         summary: null,
-        myTopCard: null, // clear stale card from any previous game
+        myTopCard: null,
       });
     });
 
@@ -93,9 +84,8 @@ export function useGameSocketEvents(): void {
       }));
     });
 
-    // Private — only sent to this player's socket
     socket.on("player:privateView", ({ topCard }) => {
-      useGameStore.getState().setMyTopCard(topCard);
+      useGameStore.setState({ myTopCard: topCard });
     });
 
     return () => {
@@ -106,5 +96,5 @@ export function useGameSocketEvents(): void {
       socket.off("game:ended");
       socket.off("player:privateView");
     };
-  }, []); // intentionally empty — see comment above
+  }, []);
 }

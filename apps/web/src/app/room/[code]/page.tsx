@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { JoinRoomForm } from "@/components/lobby/JoinRoomForm";
 import { GameView } from "@/components/game/GameView";
+import { RoomTabs } from "@/components/RoomTabs";
 import { emitStartGame, emitLeaveRoom } from "@/socket/socketEvents";
 import { clearSession } from "@/hooks/useRoom";
 import { MIN_PLAYERS } from "@fiction-wars/shared-types";
@@ -108,6 +109,9 @@ export default function RoomPage() {
       {(room.state === "in-progress" || room.state === "ended") && (
         <GameView turnTimerSeconds={room.settings.turnTimerSeconds} />
       )}
+
+      {/* Chat + Battle Log — visible in both lobby and during game */}
+      <RoomTabs />
     </main>
   );
 }

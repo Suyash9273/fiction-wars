@@ -1,10 +1,10 @@
-import {z} from "zod"
-import { CardSchema } from "./card.js"
+import { z } from "zod";
+import { CardSchema } from "./card.js";
 
 export const RoundPotEntrySchema = z.object({
-    cardId: z.string().min(1),
-    fromPlayerId: z.string().min(1),
-})
+  cardId: z.string().min(1),
+  fromPlayerId: z.string(), // intentionally empty string in broadcast GameState (server strips it for privacy)
+});
 export type RoundPotEntry = z.infer<typeof RoundPotEntrySchema>;
 
 export const GAME_STATUSES = ["awaiting-pick", "resolving", "game-over"] as const;

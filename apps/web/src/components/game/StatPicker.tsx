@@ -19,7 +19,6 @@ interface Props {
 
 // Rendered with key={roundNumber} from GameView — React remounts this
 // component on each new round, so useState always starts fresh.
-// No useEffect or ref needed to reset submitted state between rounds.
 export function StatPicker({ myStats }: Props) {
   const [submitted, setSubmitted] = useState<CardStatKey | null>(null);
 
