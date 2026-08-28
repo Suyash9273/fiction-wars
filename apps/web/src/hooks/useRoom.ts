@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { connectSocket, getSocket } from "../socket/socketClient";
+import { connectSocket, getSocket, destroySocket } from "../socket/socketClient";
 import { useRoomStore } from "../store/roomStore";
 import { useChatStore } from "../store/chatStore";
 import { useGameStore } from "../store/gameStore";
@@ -13,14 +13,9 @@ import { useGameStore } from "../store/gameStore";
  * components. Components read from the store, never from socket directly.
  */
 export function useRoomSocketEvents(): void {
-  const {
-    setRoom,
-    updatePlayer,
-    removePlayer,
-    setHost,
-  } = useRoomStore();
+  const { setRoom, updatePlayer, removePlayer, setHost } = useRoomStore();
   const { clearGame } = useGameStore();
-  const { clearChat, setMessages } = useChatStore();
+  const { clearChat } = useChatStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -42,12 +37,31 @@ export function useRoomSocketEvents(): void {
       setHost(newHostId);
     });
 
-    // Kicked: server sends error:actionFailed with SESSION_EXPIRED
+    // Kicked: server sends error:actionFailed with SESSION_EXPIRED.
+    //
+    // Pitfall: the server also sends SESSION_EXPIRED when it evicts a stale
+    // tab during a legitimate reconnect (evictExistingSocket). We must NOT
+    // redirect in that case — the evicted socket is the OLD tab, and the new
+    // tab (which sent room:reconnect) should continue normally.
+    //
+    // We distinguish the two via a flag set by useSessionPersistence:
+    //   - isReconnecting=true  → this tab just sent room:reconnect; ignore the
+    //                            SESSION_EXPIRED that evicts our own old socket
+    //   - isReconnecting=false → we are already settled; SESSION_EXPIRED means
+    //                            we genuinely got kicked
     socket.on("error:actionFailed", ({ code }) => {
       if (code === "SESSION_EXPIRED") {
+        const isReconnecting = useRoomStore.getState()._isReconnecting;
+        if (isReconnecting) {
+          // Suppress: this SESSION_EXPIRED is aimed at our own stale tab
+          // being evicted by the server, not at us.
+          return;
+        }
+        // Genuine kick or expired session — clear state and go home.
         clearGame();
         clearChat();
         useRoomStore.getState().clearRoom();
+        destroySocket();
         router.push("/");
       }
     });
@@ -63,61 +77,91 @@ export function useRoomSocketEvents(): void {
 }
 
 /**
- * Handles session token persistence and reconnect on page load.
- * Call once at the room page level before any UI renders.
+ * Handles session token persistence and reconnect on page load / page refresh.
+ *
+ * Reconnect timing pitfalls avoided:
+ * 1. We attach the room:update listener BEFORE connecting so we never miss
+ *    an early broadcast.
+ * 2. We await connectSocket() before emitting room:reconnect so the emit
+ *    never fires on a disconnected socket (autoConnect:false would silently
+ *    drop it).
+ * 3. We set _isReconnecting=true for the duration so that the error:
+ *    actionFailed handler in useRoomSocketEvents ignores the SESSION_EXPIRED
+ *    that the server sends to evict our own old socket.
+ * 4. On ack, we seed the full game + chat state so a mid-game refresh
+ *    results in a fully hydrated UI.
  */
 export function useSessionPersistence(roomCode: string): void {
-  const { setIdentity, setRoom } = useRoomStore();
-  const { setGameState, setMyTopCard } = useGameStore();
+  const { setIdentity, setRoom, setReconnecting } = useRoomStore();
+  const { setGameState, setMyTopCard, setBattleLog } = useGameStore();
   const { setMessages } = useChatStore();
+  const didAttempt = useRef(false);
 
   useEffect(() => {
+    if (didAttempt.current) return; // strict-mode double-fire guard
+    didAttempt.current = true;
+
     const storedToken = localStorage.getItem(`fw:session:${roomCode}`);
     if (!storedToken) return;
 
-    // Register a one-time room:update listener BEFORE connecting and emitting
-    // the reconnect event. The server broadcasts room:update to the room
-    // immediately after processing room:reconnect — this broadcast can arrive
-    // before the ack resolves and before useRoomSocketEvents (a separate
-    // useEffect) has had a chance to register its own room:update listener.
-    // Catching it here ensures the store is populated regardless of timing.
     const socket = getSocket();
 
-    const handleEarlyRoomUpdate = (room: import("@fiction-wars/shared-types").RoomView) => {
+    // Register the early room:update listener BEFORE connecting.
+    // The server emits room:update to the whole room right after processing
+    // room:reconnect. If useRoomSocketEvents hasn't mounted yet (separate
+    // useEffect), this catches the broadcast.
+    const handleEarlyRoomUpdate = (
+      room: import("@fiction-wars/shared-types").RoomView
+    ) => {
       setRoom(room);
     };
     socket.once("room:update", handleEarlyRoomUpdate);
 
-    connectSocket();
+    // Signal that we are mid-reconnect so error:actionFailed suppresses the
+    // SESSION_EXPIRED sent to our own evicted old socket.
+    setReconnecting(true);
 
-    socket.emit(
-      "room:reconnect",
-      { roomCode, sessionToken: storedToken },
-      (res) => {
-        // The failure shape has { ok: false, error }; the success shape has
-        // { player, room, ... } with no ok field. Going through unknown
-        // because TS won't directly widen between two non-overlapping unions.
-        if ("ok" in res) {
-          // Got the failure shape — session expired or room gone.
-          // Remove the early listener so it doesn't fire on a later event.
-          socket.off("room:update", handleEarlyRoomUpdate);
-          localStorage.removeItem(`fw:session:${roomCode}`);
-          return;
+    // Await the connection before emitting — critical with autoConnect:false.
+    connectSocket().then(() => {
+      socket.emit(
+        "room:reconnect",
+        { roomCode, sessionToken: storedToken },
+        (res) => {
+          // Always clear the reconnecting flag when the ack arrives.
+          setReconnecting(false);
+
+          // Failure shape: { ok: false, error }
+          if ("ok" in res) {
+            socket.off("room:update", handleEarlyRoomUpdate);
+            localStorage.removeItem(`fw:session:${roomCode}`);
+            return;
+          }
+
+          // Success shape: RoomReconnectAck
+          const ack =
+            res as unknown as import("@fiction-wars/shared-types").RoomReconnectAck;
+
+          setIdentity(ack.player.id, storedToken);
+          setRoom(ack.room);
+
+          if (ack.gameState) setGameState(ack.gameState);
+          if (ack.privateView) setMyTopCard(ack.privateView.topCard);
+          // Seed the battle log from reconnect ack so mid-game refreshes
+          // restore the full round history, not just the current turn state.
+          if (ack.battleLog) setBattleLog(ack.battleLog);
+          if (ack.chatHistory) setMessages(ack.chatHistory);
         }
-        const ack = res as unknown as import("@fiction-wars/shared-types").RoomReconnectAck;
-        setIdentity(ack.player.id, storedToken);
-        setRoom(ack.room);
-        if (ack.gameState) setGameState(ack.gameState);
-        if (ack.privateView) setMyTopCard(ack.privateView.topCard);
-        if (ack.chatHistory) setMessages(ack.chatHistory);
-      }
-    );
+      );
+    });
 
     return () => {
-      // Clean up the early listener if the component unmounts before the ack
+      // Clean up the early listener if the component unmounts before the ack.
       socket.off("room:update", handleEarlyRoomUpdate);
+      // Do NOT clear the reconnecting flag on unmount — the ack callback
+      // does that. Clearing it here would create a race.
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // roomCode is stable for the lifetime of this page render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode]);
 }
 

@@ -13,27 +13,46 @@ import { GameView } from "@/components/game/GameView";
 import { RoomTabs } from "@/components/RoomTabs";
 import { emitStartGame, emitLeaveRoom } from "@/socket/socketEvents";
 import { clearSession } from "@/hooks/useRoom";
+import { destroySocket } from "@/socket/socketClient";
 import { MIN_PLAYERS } from "@fiction-wars/shared-types";
+import { useGameStore } from "@/store/gameStore";
 
 export default function RoomPage() {
   const params = useParams();
   const router = useRouter();
   const code = (params.code as string).toUpperCase();
 
-  const { room, playerId } = useRoomStore();
+  const { room, playerId, _isReconnecting } = useRoomStore();
   const isHost = useRoomStore(selectIsHost);
 
+  // Hook order matters — session persistence first so it fires before
+  // room/game/chat socket listeners are attached.
   useSessionPersistence(code);
   useRoomSocketEvents();
   useGameSocketEvents();
   useChatSocketEvents();
 
+  // Show a reconnecting spinner while session persistence is in-flight.
+  if (_isReconnecting) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-6">
+        <p className="text-lg font-semibold">Reconnecting…</p>
+        <p className="text-sm text-muted-foreground">
+          Restoring your seat in room {code}
+        </p>
+      </main>
+    );
+  }
+
+  // No session / failed reconnect — show the join form.
   const isJoining = !playerId || !room;
 
   async function handleLeave() {
     clearSession(code);
-    await emitLeaveRoom();
+    useGameStore.getState().clearGame();
     useRoomStore.getState().clearRoom();
+    await emitLeaveRoom();
+    destroySocket(); // destroy after emitting so the server receives room:leave
     router.push("/");
   }
 
@@ -105,12 +124,12 @@ export default function RoomPage() {
         </>
       )}
 
-      {/* In-game */}
+      {/* In-game or ended */}
       {(room.state === "in-progress" || room.state === "ended") && (
         <GameView turnTimerSeconds={room.settings.turnTimerSeconds} />
       )}
 
-      {/* Chat + Battle Log — visible in both lobby and during game */}
+      {/* Chat + Battle Log — visible in lobby and during game */}
       <RoomTabs />
     </main>
   );

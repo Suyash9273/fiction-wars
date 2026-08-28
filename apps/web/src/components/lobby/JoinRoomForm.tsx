@@ -31,7 +31,8 @@ export function JoinRoomForm({ prefillCode }: Props) {
     setError(null);
     setLoading(true);
 
-    connectSocket();
+    // Await the connection so the emit never fires on a disconnected socket.
+    await connectSocket();
     const res = await emitJoinRoom({
       roomCode: roomCode.toUpperCase(),
       username,

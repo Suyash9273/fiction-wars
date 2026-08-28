@@ -9,6 +9,10 @@ export function useGameSocketEvents(): void {
   useEffect(() => {
     const socket = getSocket();
 
+    // game:started — server sends this immediately followed by game:turnStarted.
+    // We intentionally leave turnDeadline at 0 here and let game:turnStarted
+    // set the real deadline. Using Date.now() + N as a fallback was wrong
+    // because it caused the timer to drift from the server's deadline.
     socket.on("game:started", ({ pileCounts, firstPickerId }) => {
       const roomCode = useRoomStore.getState().room?.code ?? "";
       useGameStore.setState({
@@ -18,7 +22,7 @@ export function useGameSocketEvents(): void {
           roundNumber: 1,
           pot: [],
           status: "awaiting-pick",
-          turnDeadline: Date.now() + 30_000,
+          turnDeadline: 0, // will be overwritten by the game:turnStarted that follows
           pileCounts,
         },
         battleLog: [],
@@ -68,7 +72,9 @@ export function useGameSocketEvents(): void {
           ? {
               ...state.room,
               players: state.room.players.map((p) =>
-                p.id === eliminatedId ? { ...p, status: "eliminated" as const } : p
+                p.id === eliminatedId
+                  ? { ...p, status: "eliminated" as const }
+                  : p
               ),
             }
           : null,

@@ -28,7 +28,6 @@ export function GameView({ turnTimerSeconds }: Props) {
   // Post-game summary
   if (isGameOver) {
     if (summary) return <PostGameSummary />;
-    // game:ended received but summary not yet processed — show a brief wait
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
         <p className="text-lg font-semibold">Game over!</p>
@@ -37,8 +36,22 @@ export function GameView({ turnTimerSeconds }: Props) {
     );
   }
 
+  // Find any disconnected players to show a notice
+  const disconnectedPlayers = room.players.filter((p) => !p.isConnected);
+  const currentPickerName =
+    room.players.find((p) => p.id === gameState.currentPickerId)?.username ?? "…";
+
   return (
     <div className="flex flex-col gap-5">
+      {/* Disconnected player notices */}
+      {disconnectedPlayers.length > 0 && (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+          {disconnectedPlayers.map((p) => p.username).join(", ")}{" "}
+          {disconnectedPlayers.length === 1 ? "has" : "have"} disconnected —
+          waiting for reconnect…
+        </div>
+      )}
+
       {/* Turn timer */}
       <TurnTimer totalSeconds={turnTimerSeconds} />
 
@@ -69,9 +82,7 @@ export function GameView({ turnTimerSeconds }: Props) {
       {!isMyTurn && !isEliminated && gameState.status === "awaiting-pick" && (
         <p className="text-sm text-center text-muted-foreground">
           Waiting for{" "}
-          <span className="font-medium text-foreground">
-            {room.players.find((p) => p.id === gameState.currentPickerId)?.username ?? "…"}
-          </span>{" "}
+          <span className="font-medium text-foreground">{currentPickerName}</span>{" "}
           to pick a stat…
         </p>
       )}

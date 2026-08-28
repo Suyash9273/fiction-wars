@@ -51,7 +51,8 @@ export function CreateRoomForm() {
       maxPlayers,
     };
 
-    connectSocket();
+    // Await the connection so emit never fires on a disconnected socket.
+    await connectSocket();
     const res = await emitCreateRoom({ username, avatar, settings });
 
     if ("ok" in res && res.ok === false) {
@@ -61,20 +62,12 @@ export function CreateRoomForm() {
     }
 
     const ack = res as import("@fiction-wars/shared-types").RoomCreateAck;
-    setIdentity(ack.playerId, ack.sessionToken);
-    persistSession(ack.roomCode, ack.sessionToken);
 
-    // Fetch the full room state via reconnect before navigating.
-    // room:create returns no room object in its ack, so without this the
-    // room store stays null and the room page renders the JoinRoomForm
-    // (isJoining = !playerId || !room), forcing a manual reload.
-    const reconnectRes = await import("@/socket/socketEvents").then((m) =>
-      m.emitReconnect({ roomCode: ack.roomCode, sessionToken: ack.sessionToken })
-    );
-    if (!("ok" in reconnectRes)) {
-      const reconnectAck = reconnectRes as import("@fiction-wars/shared-types").RoomReconnectAck;
-      setRoom(reconnectAck.room);
-    }
+    // room:create ack now includes the full room view so we don't need a
+    // separate room:reconnect round-trip here.
+    setIdentity(ack.playerId, ack.sessionToken);
+    setRoom(ack.room);
+    persistSession(ack.roomCode, ack.sessionToken);
 
     router.push(`/room/${ack.roomCode}`);
   }

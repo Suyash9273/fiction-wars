@@ -1,24 +1,25 @@
 "use client"
 
-import {create} from "zustand";
+import { create } from "zustand";
 import type {
-    GameState,
-    Card,
-    BattleLogEntry,
-    GameEndedSummary
+  GameState,
+  Card,
+  BattleLogEntry,
+  GameEndedSummary,
 } from "@fiction-wars/shared-types"
 
 interface GameStoreState {
-    gameState: GameState | null;
-    myTopCard: Card | null; // private- only this player's top card, others should not see
-    battleLog: BattleLogEntry[];
-    summary: GameEndedSummary | null;
+  gameState: GameState | null;
+  myTopCard: Card | null; // private — only this player's top card
+  battleLog: BattleLogEntry[];
+  summary: GameEndedSummary | null;
 
-    setGameState: (state: GameState) => void;
-    setMyTopCard: (card: Card) => void;
-    appendBattleLogEntry: (entry: BattleLogEntry) => void;
-    setSummary: (summary: GameEndedSummary) => void;
-    clearGame: () => void;
+  setGameState: (state: GameState) => void;
+  setMyTopCard: (card: Card) => void;
+  setBattleLog: (entries: BattleLogEntry[]) => void;
+  appendBattleLogEntry: (entry: BattleLogEntry) => void;
+  setSummary: (summary: GameEndedSummary) => void;
+  clearGame: () => void;
 }
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -30,6 +31,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setGameState: (gameState) => set({ gameState }),
 
   setMyTopCard: (card) => set({ myTopCard: card }),
+
+  setBattleLog: (entries) => set({ battleLog: entries }),
 
   appendBattleLogEntry: (entry) =>
     set((state) => ({ battleLog: [...state.battleLog, entry] })),

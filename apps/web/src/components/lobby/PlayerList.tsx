@@ -14,6 +14,9 @@ export function PlayerList() {
 
   if (!room) return null;
 
+  // Host can kick in both lobby and mid-game (Section 2 of brief).
+  const canKick = isHost;
+
   return (
     <div className="flex flex-col gap-2">
       {room.players.map((player) => {
@@ -34,7 +37,7 @@ export function PlayerList() {
             />
 
             {/* Name + badges */}
-            <div className="flex flex-1 items-center gap-2">
+            <div className="flex flex-1 flex-wrap items-center gap-1.5">
               <span className="font-medium">
                 {player.username}
                 {isMe && (
@@ -52,16 +55,16 @@ export function PlayerList() {
                 </Badge>
               )}
               {player.status === "eliminated" && (
-                <Badge variant="destructive">Eliminated</Badge>
+                <Badge variant="destructive">Spectating</Badge>
               )}
             </div>
 
             {/* Kick button — host only, not for self */}
-            {isHost && !isMe && room.state === "lobby" && (
+            {canKick && !isMe && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive flex-shrink-0"
                 onClick={() =>
                   emitKickPlayer({ targetPlayerId: player.id })
                 }

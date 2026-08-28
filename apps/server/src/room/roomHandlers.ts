@@ -263,12 +263,16 @@ export function registerRoomHandlers(
     // Send recent chat history so reconnecting player doesn't miss messages
     const chatHistory = await getChatMessages(redis, roomCode);
 
+    // Include the battle log so a mid-game refresh restores full round history.
+    const battleLog = engineState?.battleLog ?? [];
+
     (ack as (r: RoomReconnectAck) => void)({
       player: playerView,
       room: roomView,
       gameState,
       privateView,
       chatHistory,
+      battleLog: battleLog.length > 0 ? battleLog : undefined,
     });
 
     // Tell room this player is back online

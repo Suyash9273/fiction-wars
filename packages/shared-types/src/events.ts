@@ -89,6 +89,8 @@ export const RoomReconnectAckSchema = z.object({
   gameState: GameStateSchema.optional(),
   privateView: PrivatePlayerViewSchema.optional(),
   chatHistory: z.array(ChatMessageSchema).optional(),
+  // Full battle log included so a mid-game refresh restores round history.
+  battleLog: z.array(BattleLogEntrySchema).optional(),
 });
 export type RoomReconnectAck = z.infer<typeof RoomReconnectAckSchema>;
 
