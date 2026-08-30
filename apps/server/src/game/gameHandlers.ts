@@ -9,7 +9,8 @@ import type {
   CardStatKey,
   GameEndedSummary,
   Room,
-} from "@fiction-wars/shared-types";import {
+} from "@fiction-wars/shared-types";
+import {
   GamePickStatPayloadSchema,
   toRoomView,
 } from "@fiction-wars/shared-types";
@@ -17,6 +18,8 @@ import {
   buildDeck,
   shuffleCryptoRandom,
   resolveRound,
+  redistributePile,
+  bestStatForCard,
   computeSummary,
   type EngineState,
 } from "@fiction-wars/game-engine";
@@ -67,16 +70,69 @@ async function emitPrivateViews(
     const topCard = player.pile[0];
     if (!topCard) continue;
 
-    const playerSocket = sockets.find(
-      (s) => s.data.playerId === player.id
-    );
-    if (!playerSocket) continue; // player disconnected — skip, they'll get it on reconnect
+    const playerSocket = sockets.find((s) => s.data.playerId === player.id);
+    if (!playerSocket) continue; // disconnected — they'll get it on reconnect
 
     playerSocket.emit("player:privateView", { topCard });
   }
 }
 
+// ─── Enrich battle log reveals with usernames ─────────────────────────────
+// The engine is pure and does not know player names. We enrich the last
+// battle log entry's reveals with usernames from the room record before
+// broadcasting or persisting.
+
+function enrichLastBattleLogEntry(
+  state: EngineState,
+  room: Room
+): EngineState {
+  const lastEntry = state.battleLog[state.battleLog.length - 1];
+  if (!lastEntry) return state;
+
+  const enrichedReveals = lastEntry.reveals.map((r) => ({
+    ...r,
+    username:
+      room.players.find((p) => p.id === r.playerId)?.username ?? r.playerId,
+  }));
+
+  return {
+    ...state,
+    battleLog: [
+      ...state.battleLog.slice(0, -1),
+      { ...lastEntry, reveals: enrichedReveals },
+    ],
+  };
+}
+
+// ─── End the game ─────────────────────────────────────────────────────────
+// Single path for all game-over outcomes: last-standing, round-cap, and
+// post-kick auto-win. Extracted so mid-game kick can reuse it without
+// duplicating the emit + persist sequence.
+
+async function endGame(
+  io: AppServer,
+  redis: Redis,
+  roomCode: string,
+  state: EngineState,
+  room: Room
+): Promise<void> {
+  const summary = computeSummary(state.battleLog);
+  io.to(roomCode).emit("game:ended", {
+    winnerId: state.winnerId!,
+    summary: summary as GameEndedSummary,
+  });
+
+  const updatedRoom: Room = { ...room, state: "ended" };
+  await Promise.all([
+    saveEngineState(redis, roomCode, state, true),
+    saveRoom(redis, updatedRoom),
+  ]);
+}
+
 // ─── Handle a round end (shared by real pick + auto-pick) ─────────────────
+// Also called by the mid-game kick path when the kicked player was the
+// current picker (the kick handler calls finalizeRound after clearing the
+// timer so we auto-pick on their behalf).
 
 async function finalizeRound(
   io: AppServer,
@@ -91,7 +147,10 @@ async function finalizeRound(
   ]);
 
   if (!state || !room) return;
-  if (state.status !== "awaiting-pick") return; // already resolved (idempotency guard)
+
+  // Idempotency guard — if the round was already resolved (e.g. a timer
+  // fired at the same instant as a real pick), this is a safe no-op.
+  if (state.status !== "awaiting-pick") return;
 
   const result = resolveRound(state, stat, wasAutoPicked);
   if (!result.ok) {
@@ -99,30 +158,10 @@ async function finalizeRound(
     return;
   }
 
-  let updatedState = result.value.updatedState;
+  // Enrich reveals with usernames before any broadcast or persist
+  let updatedState = enrichLastBattleLogEntry(result.value.updatedState, room);
 
-  // Enrich reveals with username from room state — the engine is pure and
-  // doesn't have access to room player names, so we fill them in here
-  // before the battle log entry is broadcast or stored.
-  const lastEntry = updatedState.battleLog[updatedState.battleLog.length - 1];
-  if (lastEntry) {
-    const enrichedReveals = lastEntry.reveals.map((r) => ({
-      ...r,
-      username: room.players.find((p) => p.id === r.playerId)?.username ?? r.playerId,
-    }));
-    updatedState = {
-      ...updatedState,
-      battleLog: [
-        ...updatedState.battleLog.slice(0, -1),
-        { ...lastEntry, reveals: enrichedReveals },
-      ],
-    };
-  }
-  const { battleLogEntry } = {
-    battleLogEntry: updatedState.battleLog[updatedState.battleLog.length - 1]!,
-  };
-
-  // Check round-cap win condition before checking last-standing
+  // Check round-cap win condition before last-standing
   const roundCapWinnerId = checkRoundCapWinner(updatedState, room.settings);
   if (roundCapWinnerId) {
     updatedState = {
@@ -136,13 +175,13 @@ async function finalizeRound(
     updatedState.players.map((p) => [p.id, p.pile.length])
   );
 
-  // Broadcast round result to everyone
-  io.to(roomCode).emit("game:roundResolved", {
-    battleLogEntry,
-    pileCounts,
-  });
+  const battleLogEntry =
+    updatedState.battleLog[updatedState.battleLog.length - 1]!;
 
-  // Notify eliminated players
+  // Broadcast the round result
+  io.to(roomCode).emit("game:roundResolved", { battleLogEntry, pileCounts });
+
+  // Notify any players eliminated this round
   const previousPlayerIds = new Set(state.players.map((p) => p.id));
   const currentPlayerIds = new Set(updatedState.players.map((p) => p.id));
   for (const id of previousPlayerIds) {
@@ -151,42 +190,117 @@ async function finalizeRound(
     }
   }
 
-  const gameOver = updatedState.status === "game-over";
-
-  if (gameOver) {
-    const summary = computeSummary(updatedState.battleLog);
-    io.to(roomCode).emit("game:ended", {
-      winnerId: updatedState.winnerId!,
-      summary: summary as GameEndedSummary,
-    });
-
-    // Update room state to ended
-    const updatedRoom = { ...room, state: "ended" as const };
-    await Promise.all([
-      saveEngineState(redis, roomCode, updatedState, true),
-      saveRoom(redis, updatedRoom),
-    ]);
+  if (updatedState.status === "game-over") {
+    await endGame(io, redis, roomCode, updatedState, room);
     return;
   }
 
-  // Sync pileCount on each Room player from the live engine state so that
-  // any subsequent room:update broadcast (e.g. on reconnect) shows current
-  // values instead of the stale 0 set at join time.
+  // ── Game-ending tie detection ────────────────────────────────────────────
+  // A game-ending tie is: exactly 2 active players, the round was a tie
+  // (pot-carried), both players still have cards (neither was eliminated by
+  // the tie), and the pot is non-empty.
+  //
+  // Per the brief: replay immediately — the server auto-picks the best stat
+  // for the current picker right away rather than waiting for a human pick.
+  // This avoids an infinite stall where neither player can progress.
+  //
+  // We loop until the tie is broken. Each iteration is:
+  //   1. Broadcast game:roundResolved so the client sees the tie
+  //   2. Auto-pick the best stat and resolve again
+  //   3. If still tied, loop; if won, fall through to normal end/continue
+  //
+  // We use a while loop with a circuit-breaker (MAX_TIE_REPLAYS) to guard
+  // against a hypothetical bug producing an infinite loop. In practice the
+  // deck is finite so the tie WILL break eventually.
+  const MAX_TIE_REPLAYS = 200; // hard ceiling — far more than any real game
+  let tieReplayCount = 0;
+  let workingState = updatedState;
+
+  while (
+    workingState.status === "awaiting-pick" &&
+    workingState.players.length === 2 &&
+    battleLogEntry.winnerId === "pot-carried" &&
+    workingState.pot.length > 0 &&
+    tieReplayCount < MAX_TIE_REPLAYS
+  ) {
+    tieReplayCount++;
+
+    // Find the best stat for the auto-picked turn
+    const picker = workingState.players.find(
+      (p) => p.id === workingState.currentPickerId
+    );
+    if (!picker) break;
+
+    const autoStat = bestStatForCard(picker.pile);
+    if (!autoStat) break;
+
+    // Resolve the tie-replay round
+    const tieResult = resolveRound(workingState, autoStat, true);
+    if (!tieResult.ok) {
+      console.error(
+        `[Game] Tie-replay resolveRound failed for room ${roomCode}:`,
+        tieResult.reason
+      );
+      break;
+    }
+
+    workingState = enrichLastBattleLogEntry(tieResult.value.updatedState, room);
+
+    // Check round-cap win condition on each replay too
+    const capWinner = checkRoundCapWinner(workingState, room.settings);
+    if (capWinner) {
+      workingState = { ...workingState, status: "game-over", winnerId: capWinner };
+    }
+
+    const replayPileCounts = Object.fromEntries(
+      workingState.players.map((p) => [p.id, p.pile.length])
+    );
+    const replayEntry =
+      workingState.battleLog[workingState.battleLog.length - 1]!;
+
+    io.to(roomCode).emit("game:roundResolved", {
+      battleLogEntry: replayEntry,
+      pileCounts: replayPileCounts,
+    });
+
+    // Notify eliminations from this replay round
+    const prevIds = new Set(
+      tieResult.value.updatedState.players
+        .map((p) => p.id) // before enrichment loses no players
+    );
+    const currIds = new Set(workingState.players.map((p) => p.id));
+    // Simpler: compare original state to working state
+    for (const p of updatedState.players) {
+      if (!currIds.has(p.id) && previousPlayerIds.has(p.id)) {
+        io.to(roomCode).emit("game:playerEliminated", { playerId: p.id });
+      }
+    }
+
+    if (workingState.status === "game-over") {
+      await endGame(io, redis, roomCode, workingState, room);
+      return;
+    }
+
+    // Check if the tie is broken (a real winner emerged)
+    const lastReplayEntry =
+      workingState.battleLog[workingState.battleLog.length - 1]!;
+    if (lastReplayEntry.winnerId !== "pot-carried") break; // tie broken — exit loop
+  }
+
+  // Sync pileCount on Room players from live engine state
   const roomWithPiles: Room = {
     ...room,
     players: room.players.map((p) => {
-      const enginePlayer = updatedState.players.find((ep) => ep.id === p.id);
-      return enginePlayer ? { ...p, pileCount: enginePlayer.pile.length } : p;
+      const ep = workingState.players.find((e) => e.id === p.id);
+      return ep ? { ...p, pileCount: ep.pile.length } : p;
     }),
   };
   await saveRoom(redis, roomWithPiles);
 
-  // Game continues — persist, emit new turn, arm timer, send private views
-  await saveEngineState(redis, roomCode, updatedState);
-
+  // Persist the final state after all tie replays
   const nextDeadline = computeTurnDeadline(room.settings.turnTimerSeconds);
   const stateWithDeadline: EngineState = {
-    ...updatedState,
+    ...workingState,
     turnDeadline: nextDeadline,
   };
   await saveEngineState(redis, roomCode, stateWithDeadline);
@@ -198,9 +312,166 @@ async function finalizeRound(
 
   await emitPrivateViews(io, roomCode, stateWithDeadline);
 
-  armTurnTimer(roomCode, stateWithDeadline, async (code, autoStat, auto) => {
-    await finalizeRound(io, redis, code, autoStat, auto);
-  });
+  armTurnTimer(
+    roomCode,
+    stateWithDeadline,
+    async (code, autoStat, auto) => {
+      await finalizeRound(io, redis, code, autoStat, auto);
+    }
+  );
+}
+
+// ─── Mid-game kick ────────────────────────────────────────────────────────
+// Called from roomHandlers when a kick happens during an in-progress game.
+// Responsibilities:
+//   1. Clear the turn timer FIRST to prevent a race with auto-pick
+//   2. Redistribute the kicked player's pile
+//   3. If game is now over (only 1 active player) → endGame
+//   4. If the kicked player WAS the current picker → auto-pick for them
+//      (calls finalizeRound so the round resolves cleanly)
+//   5. Otherwise → re-arm the timer with the updated state
+//
+// The room record has already had the player removed by kickPlayer() in
+// roomService before this is called — so room.players does NOT include the
+// kicked player when we read it here.
+
+export async function handleMidGameKick(
+  io: AppServer,
+  redis: Redis,
+  roomCode: string,
+  kickedPlayerId: string
+): Promise<void> {
+  const [state, room] = await Promise.all([
+    getEngineState(redis, roomCode),
+    getRoom(redis, roomCode),
+  ]);
+
+  if (!state || !room) return;
+
+  // If the game is already over or hasn't started, nothing to do
+  if (state.status === "game-over") return;
+
+  // CRITICAL: clear the timer before touching state so the auto-pick
+  // timer cannot fire concurrently with this kick resolution
+  const kickedWasPicker = state.currentPickerId === kickedPlayerId;
+  if (kickedWasPicker) {
+    clearTurnTimer(roomCode);
+  }
+
+  // Redistribute the kicked player's pile among remaining active players
+  const redistResult = redistributePile(state, kickedPlayerId);
+
+  if (!redistResult.ok) {
+    // Player was already eliminated (not in engine state) — nothing to do
+    // This can happen if they ran out of cards right as the kick arrived
+    console.warn(
+      `[Game] redistributePile skipped for ${kickedPlayerId} in ${roomCode}: ${redistResult.reason}`
+    );
+    // Still need to re-arm the timer if we cleared it
+    if (kickedWasPicker && state.status === "awaiting-pick") {
+      const picker = state.players.find(
+        (p) => p.id === state.currentPickerId
+      );
+      if (picker) {
+        armTurnTimer(roomCode, state, async (code, autoStat, auto) => {
+          await finalizeRound(io, redis, code, autoStat, auto);
+        });
+      }
+    }
+    return;
+  }
+
+  const updatedState = redistResult.value;
+
+  // Notify all clients about the updated pile counts
+  const pileCounts = Object.fromEntries(
+    updatedState.players.map((p) => [p.id, p.pile.length])
+  );
+
+  // ── Auto-win: only 1 active player remains ───────────────────────────────
+  if (updatedState.status === "game-over") {
+    // Persist the ended state
+    await saveEngineState(redis, roomCode, updatedState, true);
+
+    // Emit pile counts update so clients see the redistribution
+    io.to(roomCode).emit("game:pileCounts", { pileCounts });
+
+    await endGame(io, redis, roomCode, updatedState, room);
+    return;
+  }
+
+  // ── Kicked player was the current picker ─────────────────────────────────
+  // Save updated engine state first so finalizeRound reads the correct state
+  // (with the kicked player already removed and cards redistributed).
+  if (kickedWasPicker) {
+    // The new picker (after redistribution) takes the auto-pick turn.
+    // Find the best stat for the new picker's top card.
+    const newPicker = updatedState.players.find(
+      (p) => p.id === updatedState.currentPickerId
+    );
+
+    // Set status back to awaiting-pick and persist so finalizeRound's
+    // idempotency guard doesn't reject it
+    const stateForFinalize: EngineState = {
+      ...updatedState,
+      status: "awaiting-pick",
+      turnDeadline: computeTurnDeadline(room.settings.turnTimerSeconds),
+    };
+
+    await saveEngineState(redis, roomCode, stateForFinalize);
+
+    // Emit the new turn info so clients know who picks next
+    io.to(roomCode).emit("game:turnStarted", {
+      pickerId: stateForFinalize.currentPickerId,
+      turnDeadline: stateForFinalize.turnDeadline,
+    });
+
+    // Auto-pick the best stat for the new picker
+    const autoStat = newPicker ? bestStatForCard(newPicker.pile) : null;
+
+    if (autoStat) {
+      // finalizeRound reads state from Redis, so it will see our saved state
+      await finalizeRound(io, redis, roomCode, autoStat, true);
+    } else {
+      // New picker has no cards — shouldn't be possible after a valid
+      // redistribution, but guard defensively
+      console.error(
+        `[Game] New picker ${updatedState.currentPickerId} has no cards after kick in ${roomCode}`
+      );
+    }
+    return;
+  }
+
+  // ── Kicked player was NOT the current picker ──────────────────────────────
+  // Just persist the updated state and re-arm the timer with the remaining
+  // time so the current picker's turn continues uninterrupted.
+  await saveEngineState(redis, roomCode, updatedState);
+
+  // Sync pileCount on room record
+  const roomWithPiles: Room = {
+    ...room,
+    players: room.players.map((p) => {
+      const ep = updatedState.players.find((e) => e.id === p.id);
+      return ep ? { ...p, pileCount: ep.pile.length } : p;
+    }),
+  };
+  await saveRoom(redis, roomWithPiles);
+
+  // Emit updated pile counts so all clients see the redistribution
+  io.to(roomCode).emit("game:pileCounts", { pileCounts });
+
+  // Re-arm with remaining time from the existing deadline (don't reset the clock)
+  const stateWithExistingDeadline: EngineState = {
+    ...updatedState,
+    turnDeadline: state.turnDeadline, // preserve original deadline
+  };
+  armTurnTimer(
+    roomCode,
+    stateWithExistingDeadline,
+    async (code, autoStat, auto) => {
+      await finalizeRound(io, redis, code, autoStat, auto);
+    }
+  );
 }
 
 // ─── Handler registration ─────────────────────────────────────────────────
@@ -222,7 +493,6 @@ export function registerGameHandlers(
       return;
     }
 
-    // Lock the room first — validates host + min players + lobby state
     const lockResult = await lockRoom(redis, roomCode, playerId);
     if ("error" in lockResult) {
       (ack as (r: BasicAck) => void)({
@@ -234,17 +504,17 @@ export function registerGameHandlers(
 
     const room = lockResult.room;
 
-    // Load catalog snapshot once — never touch MongoDB mid-game
     let catalog;
     try {
       catalog = await getAllCards();
     } catch (err) {
-      // MongoDB failure must not crash an already-running game — but we're
-      // still in start so it's safe to abort here
       console.error("[Game] Failed to load catalog:", err);
       (ack as (r: BasicAck) => void)({
         ok: false,
-        error: { code: "VALIDATION_ERROR", message: "Failed to load card catalog. Please try again." },
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Failed to load card catalog. Please try again.",
+        },
       });
       return;
     }
@@ -260,7 +530,6 @@ export function registerGameHandlers(
       return;
     }
 
-    // Pick first picker randomly
     const firstPickerIndex = Math.floor(Math.random() * playerIds.length);
     const firstPickerId = playerIds[firstPickerIndex]!;
     const turnDeadline = computeTurnDeadline(room.settings.turnTimerSeconds);
@@ -276,17 +545,14 @@ export function registerGameHandlers(
       battleLog: [],
     };
 
-    // Sync pileCount on each Room player to reflect the initial deck deal.
-    // Players start with pileCount=0 (set at join); update to actual pile size.
     const roomWithInitialPiles: Room = {
       ...room,
       players: room.players.map((p) => {
-        const enginePlayer = engineState.players.find((ep) => ep.id === p.id);
-        return enginePlayer ? { ...p, pileCount: enginePlayer.pile.length } : p;
+        const ep = engineState.players.find((e) => e.id === p.id);
+        return ep ? { ...p, pileCount: ep.pile.length } : p;
       }),
     };
 
-    // Persist both the catalog snapshot and the engine state
     await Promise.all([
       saveCatalogSnapshot(redis, roomCode, catalog),
       saveEngineState(redis, roomCode, engineState),
@@ -297,20 +563,12 @@ export function registerGameHandlers(
       engineState.players.map((p) => [p.id, p.pile.length])
     );
 
-    // Broadcast room state change (lobby -> in-progress) so all clients
-    // update room.state and render GameView instead of the lobby.
-    // This MUST be emitted before game:started so the client-side conditional
-    // (room.state === "in-progress") is already true when game:started arrives.
     io.to(roomCode).emit("room:update", toRoomView(roomWithInitialPiles));
-
-    // Broadcast game started — pile counts only, no card data
     io.to(roomCode).emit("game:started", { pileCounts, firstPickerId });
     io.to(roomCode).emit("game:turnStarted", { pickerId: firstPickerId, turnDeadline });
 
-    // Send each player their own top card privately
     await emitPrivateViews(io, roomCode, engineState);
 
-    // Arm the turn timer
     armTurnTimer(roomCode, engineState, async (code, autoStat, auto) => {
       await finalizeRound(io, redis, code, autoStat, auto);
     });
@@ -350,9 +608,8 @@ export function registerGameHandlers(
       return;
     }
 
-    // Idempotency guard — duplicate pick on an already-resolved round is a no-op
     if (state.status !== "awaiting-pick") {
-      (ack as (r: BasicAck) => void)({ ok: true });
+      (ack as (r: BasicAck) => void)({ ok: true }); // idempotent no-op
       return;
     }
 
@@ -364,7 +621,7 @@ export function registerGameHandlers(
       return;
     }
 
-    // CRITICAL: cancel timer BEFORE resolveRound — prevents double-resolution race
+    // CRITICAL: cancel timer BEFORE resolveRound to prevent double-resolution
     clearTurnTimer(roomCode);
 
     await finalizeRound(io, redis, roomCode, parsed.data.stat, false);
@@ -372,15 +629,15 @@ export function registerGameHandlers(
   });
 }
 
-// Export for use in roomHandlers reconnect path (Feature 8)
+// ─── Exports ──────────────────────────────────────────────────────────────
+
 export { emitPrivateViews, toBroadcastGameState };
 export { deleteEngineState, deleteCatalogSnapshot };
 
 /**
- * Returns a finalizeRound callback bound to the given io + redis instances.
- * Used by roomHandlers to re-arm the turn timer after a server restart
- * without creating a circular import (gameHandlers imports roomHandlers;
- * roomHandlers dynamically imports this factory instead).
+ * Returns a finalizeRound callback bound to io + redis.
+ * Used by roomHandlers to re-arm the turn timer after reconnect without
+ * creating a circular import.
  */
 export function makeFinalizeRound(
   io: AppServer,

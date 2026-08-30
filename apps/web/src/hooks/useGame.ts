@@ -66,6 +66,15 @@ export function useGameSocketEvents(): void {
       }));
     });
 
+    // Pile counts change outside round resolution when a player is kicked mid-game
+    socket.on("game:pileCounts", ({ pileCounts }) => {
+      useGameStore.setState((state) => ({
+        gameState: state.gameState
+          ? { ...state.gameState, pileCounts }
+          : null,
+      }));
+    });
+
     socket.on("game:playerEliminated", ({ playerId: eliminatedId }) => {
       useRoomStore.setState((state) => ({
         room: state.room
@@ -98,6 +107,7 @@ export function useGameSocketEvents(): void {
       socket.off("game:started");
       socket.off("game:turnStarted");
       socket.off("game:roundResolved");
+      socket.off("game:pileCounts");
       socket.off("game:playerEliminated");
       socket.off("game:ended");
       socket.off("player:privateView");

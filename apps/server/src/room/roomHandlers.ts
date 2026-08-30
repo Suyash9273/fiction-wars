@@ -82,6 +82,9 @@ async function handlePlayerLeave(
 
       if (!stillDisconnected) return;
 
+      // Snapshot the room state before removal so we know if we were mid-game
+      const wasMidGame = current.state === "in-progress";
+
       const result = await removePlayerFromRoom(redis, roomCode, playerId);
       if ("error" in result) return;
 
@@ -94,6 +97,16 @@ async function handlePlayerLeave(
       io.to(roomCode).emit("room:update", toRoomView(updatedRoom));
       if (newHostId) {
         io.to(roomCode).emit("room:hostMigrated", { newHostId });
+      }
+
+      // Mid-game: treat the expired disconnect exactly like a kick —
+      // redistribute the player's cards, handle auto-win, handle picker
+      // handoff. This is the same path the kick handler uses so all
+      // edge-cases (only 1 player left, disconnected player was picker)
+      // are handled identically.
+      if (wasMidGame) {
+        const { handleMidGameKick } = await import("../game/gameHandlers.js");
+        await handleMidGameKick(io, redis, roomCode, playerId);
       }
     }, DISCONNECT_GRACE_PERIOD_MS);
 
@@ -294,7 +307,7 @@ export function registerRoomHandlers(
     (ack as (r: BasicAck) => void)({ ok: true });
   });
 
-  // room:kick — host only
+  // room:kick — host only, works in both lobby and in-progress
   socket.on("room:kick", async (payload: RoomKickPayload, ack) => {
     const parsed = RoomKickPayloadSchema.safeParse(payload);
     if (!parsed.success) {
@@ -314,7 +327,20 @@ export function registerRoomHandlers(
       return;
     }
 
-    const result = await kickPlayer(redis, roomCode, playerId, parsed.data.targetPlayerId);
+    const targetPlayerId = parsed.data.targetPlayerId;
+    const room = await getRoom(redis, roomCode);
+    if (!room) {
+      (ack as (r: BasicAck) => void)({
+        ok: false,
+        error: { code: "ROOM_NOT_FOUND", message: "Room not found." },
+      });
+      return;
+    }
+
+    const isMidGame = room.state === "in-progress";
+
+    // Remove player from the room record (lobby and mid-game)
+    const result = await kickPlayer(redis, roomCode, playerId, targetPlayerId);
     if ("error" in result) {
       (ack as (r: BasicAck) => void)({
         ok: false,
@@ -323,9 +349,9 @@ export function registerRoomHandlers(
       return;
     }
 
-    // Disconnect the kicked player's socket
+    // Notify and disconnect the kicked player's socket
     const kickedSocket = [...(await io.in(roomCode).fetchSockets())].find(
-      (s) => s.data.playerId === parsed.data.targetPlayerId
+      (s) => s.data.playerId === targetPlayerId
     );
     if (kickedSocket) {
       kickedSocket.emit("error:actionFailed", {
@@ -335,8 +361,18 @@ export function registerRoomHandlers(
       kickedSocket.leave(roomCode);
     }
 
-    io.to(roomCode).emit("room:playerLeft", { playerId: parsed.data.targetPlayerId });
+    // Broadcast the room-level player removal to everyone still in the room
+    io.to(roomCode).emit("room:playerLeft", { playerId: targetPlayerId });
     io.to(roomCode).emit("room:update", toRoomView(result.room));
+
+    // Mid-game: update the engine state (redistribute cards, handle auto-win,
+    // handle kicked-picker auto-pick). We do this AFTER the room broadcasts
+    // above so clients already know the player is gone before game events arrive.
+    if (isMidGame) {
+      const { handleMidGameKick } = await import("../game/gameHandlers.js");
+      await handleMidGameKick(io, redis, roomCode, targetPlayerId);
+    }
+
     (ack as (r: BasicAck) => void)({ ok: true });
   });
 

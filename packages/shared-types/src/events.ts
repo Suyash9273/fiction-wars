@@ -133,6 +133,12 @@ export type GameRoundResolvedPayload = z.infer<typeof GameRoundResolvedPayloadSc
 export const GamePlayerEliminatedPayloadSchema = z.object({ playerId: z.string().min(1) });
 export type GamePlayerEliminatedPayload = z.infer<typeof GamePlayerEliminatedPayloadSchema>;
 
+// Emitted when pile counts change outside of a round resolution (e.g. mid-game kick redistribution)
+export const GamePileCountsPayloadSchema = z.object({
+  pileCounts: z.record(z.string(), z.number()),
+});
+export type GamePileCountsPayload = z.infer<typeof GamePileCountsPayloadSchema>;
+
 // Matches the four post-game metrics named in Section 11 of the brief
 // (rounds won per player, best stat categories, longest win streak,
 // biggest pot claimed) — all pure derived data from the battle log.
@@ -200,6 +206,7 @@ export interface ServerToClientEvents {
   "game:turnStarted": (payload: GameTurnStartedPayload) => void;
   "game:roundResolved": (payload: GameRoundResolvedPayload) => void;
   "game:playerEliminated": (payload: GamePlayerEliminatedPayload) => void;
+  "game:pileCounts": (payload: GamePileCountsPayload) => void;
   "game:ended": (payload: GameEndedPayload) => void;
   "chat:newMessage": (payload: ChatNewMessagePayload) => void;
   "chat:reactionUpdated": (payload: ChatReactionUpdatedPayload) => void;
