@@ -56,7 +56,11 @@ export function CreateRoomForm() {
     const res = await emitCreateRoom({ username, avatar, settings });
 
     if ("ok" in res && res.ok === false) {
-      setError(res.error.message);
+      const messages: Record<string, string> = {
+        RATE_LIMITED: "You're doing that too fast. Please wait a moment and try again.",
+        VALIDATION_ERROR: res.error.message,
+      };
+      setError(messages[res.error.code] ?? res.error.message);
       setLoading(false);
       return;
     }

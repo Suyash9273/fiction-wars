@@ -45,6 +45,7 @@ export function JoinRoomForm({ prefillCode }: Props) {
         ROOM_LOCKED: "This game has already started.",
         ROOM_FULL: "This room is full.",
         USERNAME_TAKEN: "That username is taken in this room.",
+        RATE_LIMITED: "You're doing that too fast. Please wait a moment and try again.",
       };
       setError(messages[res.error.code] ?? res.error.message);
       setLoading(false);

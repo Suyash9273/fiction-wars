@@ -6,6 +6,7 @@ import { useRoomSocketEvents, useSessionPersistence } from "@/hooks/useRoom";
 import { useGameSocketEvents } from "@/hooks/useGame";
 import { useChatSocketEvents } from "@/hooks/useChat";
 import { PlayerList } from "@/components/lobby/PlayerList";
+import { SettingsPanel } from "@/components/lobby/SettingsPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { JoinRoomForm } from "@/components/lobby/JoinRoomForm";
@@ -113,6 +114,8 @@ export default function RoomPage() {
             </h2>
             <PlayerList />
           </section>
+
+          <SettingsPanel />
 
           {isHost && (
             <Button onClick={handleStartGame} disabled={!canStart}>

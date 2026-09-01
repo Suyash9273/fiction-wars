@@ -36,6 +36,7 @@ import {
   getRoom,
 } from "./roomService.js";
 import { DISCONNECT_GRACE_PERIOD_MS } from "../constants.js";
+import { consumeRoomActionToken, cleanupRoomActionBucket } from "../chat/rateLimiter.js";
 import { evictExistingSocket } from "../session/sessionManager.js";
 import { getEngineState, toBroadcastGameState } from "../game/gameService.js";
 import { armTurnTimer } from "../game/timerManager.js";
@@ -150,6 +151,14 @@ export function registerRoomHandlers(
       return;
     }
 
+    if (!consumeRoomActionToken(socket.id)) {
+      (ack as (r: RoomCreateAck | { ok: false; error: { code: string; message: string } }) => void)({
+        ok: false,
+        error: { code: "RATE_LIMITED", message: "You are creating rooms too quickly. Please wait a moment." },
+      });
+      return;
+    }
+
     const { username, avatar, settings } = parsed.data;
     const result = await createRoom(redis, username, avatar, settings);
 
@@ -184,6 +193,14 @@ export function registerRoomHandlers(
       (ack as (r: RoomJoinAck | { ok: false; error: { code: string; message: string } }) => void)({
         ok: false,
         error: { code: "VALIDATION_ERROR", message: parsed.error.issues[0]?.message ?? "Invalid payload" },
+      });
+      return;
+    }
+
+    if (!consumeRoomActionToken(socket.id)) {
+      (ack as (r: RoomJoinAck | { ok: false; error: { code: string; message: string } }) => void)({
+        ok: false,
+        error: { code: "RATE_LIMITED", message: "You are joining rooms too quickly. Please wait a moment." },
       });
       return;
     }
@@ -414,6 +431,7 @@ export function registerRoomHandlers(
   // index.ts must NOT register a second one (would double-fire leave logic).
   socket.on("disconnect", async (reason) => {
     console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
+    cleanupRoomActionBucket(socket.id);
     await handlePlayerLeave(io, redis, socket, "disconnect");
   });
 }
