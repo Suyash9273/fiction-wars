@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { Card, CardStatKey } from "@fiction-wars/shared-types";
 import { CARD_STAT_KEYS } from "@fiction-wars/shared-types";
@@ -44,15 +45,29 @@ export function CardDisplay({
         dimmed && "opacity-40"
       )}
     >
-      {/* Art area — accent color placeholder; swap for <Image> when imageUrl added */}
+      {/* Art area — image when available, accent-color placeholder otherwise */}
       <div
         className={cn(
-          "w-full rounded-md flex items-end justify-start p-2",
+          "relative w-full rounded-md overflow-hidden flex items-end justify-start",
           headerHeight[size]
         )}
-        style={{ backgroundColor: card.accentColor }}
+        style={card.imageUrl ? undefined : { backgroundColor: card.accentColor }}
       >
-        <span className="text-xs font-semibold text-white/80 uppercase tracking-wide">
+        {card.imageUrl ? (
+          <Image
+            src={card.imageUrl}
+            alt={card.name}
+            fill
+            sizes="(max-width: 768px) 224px, 224px"
+            className="object-cover object-top"
+            unoptimized={false}
+          />
+        ) : (
+          /* Fallback accent block already handled by style above */
+          null
+        )}
+        {/* Universe badge always on top */}
+        <span className="relative z-10 text-xs font-semibold text-white/80 uppercase tracking-wide drop-shadow p-2">
           {card.universe}
         </span>
       </div>

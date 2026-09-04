@@ -5,7 +5,7 @@ import { type Card } from "@fiction-wars/shared-types";
 // genuine weakness so stat-picking is a real decision, not just "pick ATK
 // every round." Total stat variance is intentional.
 
-export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
+export const SEED_CARDS: Card[] = [
   // ─── DC ──────────────────────────────────────────────────────────────
   {
     id: "superman-dc",
@@ -13,6 +13,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 97, def: 92, speed: 88, hp: 99 },
     accentColor: "#0032A0",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363821/fiction-wars/dc/superman-dc.webp",
   },
   {
     id: "batman-dc",
@@ -20,6 +21,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 72, def: 80, speed: 75, hp: 68 },
     accentColor: "#1a1a2e",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363772/fiction-wars/dc/batman-dc.webp",
   },
   {
     id: "wonderwoman-dc",
@@ -27,6 +29,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 90, def: 88, speed: 80, hp: 91 },
     accentColor: "#C41E3A",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363825/fiction-wars/dc/wonderwoman-dc.jpg",
   },
   {
     id: "theflash-dc",
@@ -34,6 +37,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 70, def: 50, speed: 99, hp: 72 },
     accentColor: "#CC0000",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363823/fiction-wars/dc/theflash-dc.jpg",
   },
   {
     id: "greenlantern-dc",
@@ -41,6 +45,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 82, def: 85, speed: 78, hp: 80 },
     accentColor: "#00A550",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363792/fiction-wars/dc/greenlantern-dc.jpg",
   },
   {
     id: "aquaman-dc",
@@ -48,6 +53,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 85, def: 78, speed: 72, hp: 88 },
     accentColor: "#F7A800",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363768/fiction-wars/dc/aquaman-dc.webp",
   },
   {
     id: "cyborg-dc",
@@ -55,6 +61,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 80, def: 84, speed: 68, hp: 82 },
     accentColor: "#708090",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363779/fiction-wars/dc/cyborg-dc.jpg",
   },
   {
     id: "shazam-dc",
@@ -62,6 +69,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 89, def: 85, speed: 85, hp: 90 },
     accentColor: "#FFD700",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363803/fiction-wars/dc/shazam-dc.jpg",
   },
   {
     id: "joker-dc",
@@ -69,6 +77,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 55, def: 40, speed: 60, hp: 50 },
     accentColor: "#6B0AC9",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363797/fiction-wars/dc/joker-dc.jpg",
   },
   {
     id: "lexluthor-dc",
@@ -76,6 +85,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 65, def: 70, speed: 50, hp: 60 },
     accentColor: "#2E8B57",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363800/fiction-wars/dc/lexluthor-dc.jpg",
   },
   {
     id: "darkseid-dc",
@@ -83,6 +93,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 98, def: 97, speed: 70, hp: 100 },
     accentColor: "#4B0082",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363787/fiction-wars/dc/darkseid-dc.jpg",
   },
   {
     id: "harleyquinn-dc",
@@ -90,6 +101,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 60, def: 45, speed: 72, hp: 55 },
     accentColor: "#FF1493",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363794/fiction-wars/dc/harleyquinn-dc.jpg",
   },
   {
     id: "blackadam-dc",
@@ -97,6 +109,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 93, def: 88, speed: 84, hp: 92 },
     accentColor: "#B8860B",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363774/fiction-wars/dc/blackadam-dc.jpg",
   },
   {
     id: "deathstroke-dc",
@@ -104,6 +117,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 82, def: 76, speed: 78, hp: 74 },
     accentColor: "#808080",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363789/fiction-wars/dc/deathstroke-dc.avif",
   },
   {
     id: "greenarrow-dc",
@@ -111,6 +125,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "DC",
     stats: { atk: 68, def: 62, speed: 70, hp: 64 },
     accentColor: "#228B22",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788363790/fiction-wars/dc/greenarrow-dc.jpg",
   },
 
   // ─── Marvel ──────────────────────────────────────────────────────────
@@ -120,6 +135,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 85, def: 88, speed: 80, hp: 80 },
     accentColor: "#C0392B",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386391/fiction-wars/dc/ironman-marvel.jpg",
   },
   {
     id: "spiderman-marvel",
@@ -127,6 +143,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 72, def: 65, speed: 90, hp: 70 },
     accentColor: "#E74C3C",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386414/fiction-wars/dc/spiderman-marvel.jpg",
   },
   {
     id: "thor-marvel",
@@ -134,6 +151,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 94, def: 88, speed: 76, hp: 96 },
     accentColor: "#2980B9",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386421/fiction-wars/dc/thor-marvel.jpg",
   },
   {
     id: "captainamerica-marvel",
@@ -141,6 +159,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 74, def: 88, speed: 72, hp: 80 },
     accentColor: "#154360",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386381/fiction-wars/dc/captainamerica-marvel.jpg",
   },
   {
     id: "hulk-marvel",
@@ -148,6 +167,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 98, def: 80, speed: 55, hp: 100 },
     accentColor: "#1E8449",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386389/fiction-wars/dc/hulk-marvel.jpg",
   },
   {
     id: "blackwidow-marvel",
@@ -155,6 +175,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 65, def: 60, speed: 84, hp: 58 },
     accentColor: "#2C3E50",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386380/fiction-wars/dc/blackwidow-marvel.jpg",
   },
   {
     id: "hawkeye-marvel",
@@ -162,6 +183,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 70, def: 55, speed: 74, hp: 60 },
     accentColor: "#6C3483",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386387/fiction-wars/dc/hawkeye-marvel.jpg",
   },
   {
     id: "doctorstrange-marvel",
@@ -169,6 +191,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 88, def: 82, speed: 78, hp: 75 },
     accentColor: "#884EA0",
+    // no image uploaded yet — renders gradient fallback
   },
   {
     id: "blackpanther-marvel",
@@ -176,6 +199,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 80, def: 82, speed: 86, hp: 78 },
     accentColor: "#1A1A2E",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386379/fiction-wars/dc/blackpanther-marvel.jpg",
   },
   {
     id: "scarletwitch-marvel",
@@ -183,6 +207,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 94, def: 70, speed: 75, hp: 72 },
     accentColor: "#C0392B",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386412/fiction-wars/dc/scarletwitch-marvel.jpg",
   },
   {
     id: "thanos-marvel",
@@ -190,6 +215,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 97, def: 95, speed: 65, hp: 99 },
     accentColor: "#6C3483",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386417/fiction-wars/dc/thanos-marvel.webp",
   },
   {
     id: "wolverine-marvel",
@@ -197,6 +223,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 86, def: 75, speed: 72, hp: 95 },
     accentColor: "#F39C12",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386424/fiction-wars/dc/wolverine-marvel.jpg",
   },
   {
     id: "magneto-marvel",
@@ -204,6 +231,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 88, def: 82, speed: 70, hp: 74 },
     accentColor: "#C0392B",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386408/fiction-wars/dc/magento-marvel.jpg",
   },
   {
     id: "loki-marvel",
@@ -211,6 +239,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 78, def: 72, speed: 80, hp: 70 },
     accentColor: "#1F618D",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386406/fiction-wars/dc/loki-marvel.webp",
   },
   {
     id: "captainmarvel-marvel",
@@ -218,6 +247,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 92, def: 85, speed: 90, hp: 90 },
     accentColor: "#1F618D",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386383/fiction-wars/dc/captainmarvel-marvel.jpg",
   },
   {
     id: "antman-marvel",
@@ -225,6 +255,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Marvel",
     stats: { atk: 62, def: 60, speed: 78, hp: 58 },
     accentColor: "#E74C3C",
+    // no image uploaded yet — renders gradient fallback
   },
 
   // ─── Anime ───────────────────────────────────────────────────────────
@@ -234,6 +265,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 99, def: 85, speed: 96, hp: 98 },
     accentColor: "#F39C12",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381810/fiction-wars/dc/goku-anime.jpg",
   },
   {
     id: "vegeta-anime",
@@ -241,6 +273,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 95, def: 82, speed: 92, hp: 93 },
     accentColor: "#2C3E50",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381838/fiction-wars/dc/vegeta-anime.jpg",
   },
   {
     id: "naruto-anime",
@@ -248,6 +281,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 88, def: 75, speed: 90, hp: 92 },
     accentColor: "#E67E22",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381828/fiction-wars/dc/naruto-anime.jpg",
   },
   {
     id: "sasuke-anime",
@@ -255,6 +289,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 90, def: 78, speed: 92, hp: 82 },
     accentColor: "#2C3E50",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381835/fiction-wars/dc/sasuke-anime.jpg",
   },
   {
     id: "luffy-anime",
@@ -262,6 +297,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 88, def: 72, speed: 85, hp: 96 },
     accentColor: "#E74C3C",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381826/fiction-wars/dc/luffy-anime.jpg",
   },
   {
     id: "zoro-anime",
@@ -269,6 +305,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 92, def: 76, speed: 80, hp: 88 },
     accentColor: "#27AE60",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381841/fiction-wars/dc/zoro-anime.jpg",
   },
   {
     id: "ichigo-anime",
@@ -276,6 +313,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 91, def: 78, speed: 88, hp: 87 },
     accentColor: "#E74C3C",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381817/fiction-wars/dc/ichigo-anime.jpg",
   },
   {
     id: "saitama-anime",
@@ -283,6 +321,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 100, def: 60, speed: 98, hp: 100 },
     accentColor: "#F39C12",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381831/fiction-wars/dc/saitama-anime.jpg",
   },
   {
     id: "eren-anime",
@@ -290,6 +329,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 88, def: 70, speed: 74, hp: 85 },
     accentColor: "#808080",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381807/fiction-wars/dc/eren-anime.jpg",
   },
   {
     id: "levi-anime",
@@ -297,6 +337,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 87, def: 74, speed: 97, hp: 78 },
     accentColor: "#2C3E50",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381822/fiction-wars/dc/levi-anime.jpg",
   },
   {
     id: "deku-anime",
@@ -304,6 +345,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 85, def: 72, speed: 82, hp: 80 },
     accentColor: "#2ECC71",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381805/fiction-wars/dc/deku-anime.jpg",
   },
   {
     id: "bakugo-anime",
@@ -311,6 +353,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 90, def: 68, speed: 85, hp: 76 },
     accentColor: "#E74C3C",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381804/fiction-wars/dc/bakugo-anime.jpg",
   },
   {
     id: "allmight-anime",
@@ -318,6 +361,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 97, def: 88, speed: 88, hp: 92 },
     accentColor: "#F1C40F",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381802/fiction-wars/dc/allmight-anime.jpg",
   },
   {
     id: "killua-anime",
@@ -325,6 +369,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 84, def: 70, speed: 96, hp: 74 },
     accentColor: "#85C1E9",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381818/fiction-wars/dc/killua-anime.jpg",
   },
   {
     id: "gon-anime",
@@ -332,6 +377,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Anime",
     stats: { atk: 82, def: 68, speed: 85, hp: 90 },
     accentColor: "#27AE60",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788381811/fiction-wars/dc/gon-anime.jpg",
   },
 
   // ─── Other ───────────────────────────────────────────────────────────
@@ -341,6 +387,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 84, def: 80, speed: 74, hp: 82 },
     accentColor: "#BDC3C7",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386281/fiction-wars/dc/geralt-other.jpg",
   },
   {
     id: "masterchief-other",
@@ -348,6 +395,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 88, def: 90, speed: 70, hp: 92 },
     accentColor: "#117A65",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386290/fiction-wars/dc/masterchief-other.jpg",
   },
   {
     id: "kratos-other",
@@ -355,6 +403,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 97, def: 88, speed: 72, hp: 96 },
     accentColor: "#E74C3C",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386286/fiction-wars/dc/kratos-other.jpg",
   },
   {
     id: "doomslayer-other",
@@ -362,6 +411,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 96, def: 80, speed: 82, hp: 94 },
     accentColor: "#E74C3C",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386276/fiction-wars/dc/doomslayer-other.webp",
   },
   {
     id: "link-other",
@@ -369,6 +419,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 75, def: 78, speed: 80, hp: 76 },
     accentColor: "#27AE60",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386289/fiction-wars/dc/link-other.jpg",
   },
   {
     id: "cloud-other",
@@ -376,6 +427,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 88, def: 74, speed: 76, hp: 82 },
     accentColor: "#5DADE2",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386273/fiction-wars/dc/cloud-other.jpg",
   },
   {
     id: "aragorn-other",
@@ -383,6 +435,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 80, def: 78, speed: 70, hp: 80 },
     accentColor: "#6E2F1A",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386269/fiction-wars/dc/aragorn-other.jpg",
   },
   {
     id: "arthur-other",
@@ -390,6 +443,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 78, def: 72, speed: 68, hp: 80 },
     accentColor: "#7D6608",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386271/fiction-wars/dc/arthur-other.jpg",
   },
   {
     id: "aloy-other",
@@ -397,6 +451,7 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 76, def: 70, speed: 82, hp: 74 },
     accentColor: "#E67E22",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386264/fiction-wars/dc/aloy-other.jpg",
   },
   {
     id: "jonsnow-other",
@@ -404,5 +459,6 @@ export const SEED_CARDS: Omit<Card, "imageUrl">[] = [
     universe: "Other",
     stats: { atk: 78, def: 76, speed: 68, hp: 76 },
     accentColor: "#2C3E50",
+    imageUrl: "https://res.cloudinary.com/dvqczcunl/image/upload/v1788386283/fiction-wars/dc/jonsnow-other.jpg",
   },
 ];
